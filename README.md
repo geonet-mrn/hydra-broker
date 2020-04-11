@@ -69,13 +69,15 @@ For production use, we recommend to set up Hydra as a system service, e.g. using
 
 ## Unit Tests
 
-The Hydra repository contains a set of PyUnit unit tests to verify Hydra's conformity with the NGSI-LD standard. Just as Hydra's NGSI-LD implementation itself, the unit tests are currently **not complete**.
-
-In order to run the unit tests, you need a running Hydra instance. In the shell script "run-tests.sh", change the environment variable *NGSI_ENDPOINT* to the endpoint URL of the Hydra instance you want to test. Note that the base URL *must* end with a '/'! The preconfigured default value is "http://localhost:5000/". 
+The Hydra repository contains a set of PyUnit unit tests to verify Hydra's conformity with the NGSI-LD standard. Just as Hydra's NGSI-LD implementation itself, the unit tests are currently not complete.
 
 ### ATTENTION:
 
-**These unit tests will COMPETELY CLEAR YOUR HYDRA DATABASE each time you run them!**
+**The unit tests will COMPETELY CLEAR YOUR HYDRA DATABASE each time you run them!**
 **DO NOT run the unit tests on a production Hydra instance that holds important data!**
 
-To run the unit tests, start the script *run-tests.sh*.
+You can run the unit tests by launching the included shell script *tests.example.sh". This shell script will automatically start a local Hydra instance on which the tests are performed. This instance runs directly on a "plain" python3 process (no Gunicorn, no multi-threading) and is automatically stopped again when the tests are completed. 
+
+The Hydra user name and password which are used for the tests are defined as system environment variables in the shell script. Make sure that they are the same as the ones specified in your hydraconfig.json.
+
+**AGAIN: Make sure that you DON'T run the unit tests on a production system or any other Hydra instance that holds valuable data. ALL DATA IN THE DATABASE USED BY THE BROKER INSTANCE WILL BE DELETED!**
