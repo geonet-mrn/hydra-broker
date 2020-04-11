@@ -1,5 +1,7 @@
 import json, re
 
+# TODO: 3 Understand temporal properties (string or not? When string, when object?, See NGSI-LD spec 4.8)
+
 # This is with variable time zone:
 #regexp_dateTime_iso8601 = re.compile("^(-?(?:[1-9][0-9]*)?[0-9]{4})-(1[0-2]|0[1-9])-(3[01]|0[1-9]|[12][0-9])T(2[0-3]|[01][0-9]):([0-5][0-9]):([0-5][0-9])(\.[0-9]+)?(Z|[+-](?:2[0-3]|[01][0-9]):[0-5][0-9])?$")
 
@@ -161,7 +163,10 @@ def validate_entity_member(member):
         return NgsiLdError("BadRequestData", "Member is missing attribute 'type': " + str(member))
         
 
+    
     if member['type'] == 'GeoProperty':
+        # TODO: 3 Take into account NGSI-LD spec section 4.7.2!
+
         if not 'value' in member:
             return NgsiLdError("BadRequestData", "GeoProperty is missing attribute 'value'")
 
