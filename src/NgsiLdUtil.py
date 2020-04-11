@@ -143,11 +143,11 @@ def validate_entity_member(member):
     # NOTE: A member can be a property or a relationship
 
     if not isinstance(member, dict):
-        return NgsiLdError("BadRequestData", "Member is not a JSON object")
+        return NgsiLdError("BadRequestData", "Member is not a JSON object: " + str(member))
 
     if not 'type' in member:
-        return NgsiLdError("BadRequestData", "Member is missing attribute 'type'")
-    
+        return NgsiLdError("BadRequestData", "Member is missing attribute 'type': " + str(member))
+        
 
     if member['type'] == 'GeoProperty':
         if not 'value' in member:
@@ -156,7 +156,7 @@ def validate_entity_member(member):
         geojson = member['value']
 
         if not 'type' in geojson:
-            return NgsiLdError("BadRequestData", "GeoJSON is missing attribute 'value'")
+            return NgsiLdError("BadRequestData", "GeoJSON is missing attribute 'type'")
 
         geometryTypes = ['Point', 'MultiPoint', 'LineString', 'MultiLineString', 'Polygon', 'MultiPolygon']
 
@@ -173,6 +173,14 @@ def validate_entity_member(member):
 
         if not 'value' in member:
             return NgsiLdError("BadRequestData", "Property is missing attribute 'value'")
+
+        if isinstance(member['value'], dict):
+            if not '@type' in member['value']:
+                return NgsiLdError("BadRequestData", "Property value is missing attribute '@type': " + str(member))
+
+            if not '@value' in member['value']:
+                return NgsiLdError("BadRequestData", "Property value is missing attribute '@value': " + str(member))
+
 
         if 'observedAt' in member and not validateDatetimeString(member['observedAt']):
             return NgsiLdError("BadRequestData", "'observedAt' is not a valid ISO-8601 datetime string.")
