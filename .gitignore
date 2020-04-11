@@ -1,0 +1,9 @@
+*.pyc
+__pycache__
+.vscode
+
+hydrabroker.pid
+
+
+hydraconfig.json
+run-tests.example.sh

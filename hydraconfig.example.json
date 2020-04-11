@@ -1,0 +1,12 @@
+{
+    "db_host": "localhost",
+    "db_user": "postgres",
+    "db_password": "---",
+    "db_name": "hydra",
+    "db_table_data": "hydra",
+    "db_table_geom": "hydra_geom",
+    "hydra_port": 5000,
+    "hydra_users": {
+        "john": "doe"
+    }
+}

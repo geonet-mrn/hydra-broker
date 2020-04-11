@@ -1,0 +1,6 @@
+requests==2.20.0
+Flask_HTTPAuth==3.2.1
+Flask==1.0
+Werkzeug==0.15.3
+psycopg2==2.8.4
+python_dateutil==2.8.1
