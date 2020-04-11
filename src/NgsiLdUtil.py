@@ -1,6 +1,11 @@
 import json, re
 
-regexp_dateTime_iso8601 = re.compile("^(-?(?:[1-9][0-9]*)?[0-9]{4})-(1[0-2]|0[1-9])-(3[01]|0[1-9]|[12][0-9])T(2[0-3]|[01][0-9]):([0-5][0-9]):([0-5][0-9])(\.[0-9]+)?(Z|[+-](?:2[0-3]|[01][0-9]):[0-5][0-9])?$")
+# This is with variable time zone:
+#regexp_dateTime_iso8601 = re.compile("^(-?(?:[1-9][0-9]*)?[0-9]{4})-(1[0-2]|0[1-9])-(3[01]|0[1-9]|[12][0-9])T(2[0-3]|[01][0-9]):([0-5][0-9]):([0-5][0-9])(\.[0-9]+)?(Z|[+-](?:2[0-3]|[01][0-9]):[0-5][0-9])?$")
+
+# This is with fixed zulu time zone (UTC):
+regexp_dateTime_iso8601 = re.compile("^(-?(?:[1-9][0-9]*)?[0-9]{4})-(1[0-2]|0[1-9])-(3[01]|0[1-9]|[12][0-9])T(2[0-3]|[01][0-9]):([0-5][0-9]):([0-5][0-9])(\.[0-9]+)?Z")
+
 regexp_date_iso8601 = re.compile("^(-?(?:[1-9][0-9]*)?[0-9]{4})-(1[0-2]|0[1-9])-(3[01]|0[1-9]|[12][0-9])(Z|[+-](?:2[0-3]|[01][0-9]):[0-5][0-9])?$")
     
 
@@ -88,7 +93,14 @@ def createEntityTemporal(entity, temporalQuery):
 
 
 def validateDatetimeString(datetime):
-    return regexp_dateTime_iso8601.match(datetime) or regexp_date_iso8601.match(datetime)
+
+    # Valiate DateTime strings according to NGSI-LD spec section 4.6.3
+    
+    # NOTE: 
+    # - NGSI-LD expects the full ISO 8601 representation. Short forms (e.g. date only) are not permitted!
+    # - Time zone must be "Z" / zulu (UTC)
+
+    return regexp_dateTime_iso8601.match(datetime)# or regexp_date_iso8601.match(datetime)
     
 
 ############# BEGIN Validate entity according to NGSL-LD spec section 4.5.1 ############### 
