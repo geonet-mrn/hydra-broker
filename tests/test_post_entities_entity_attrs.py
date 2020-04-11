@@ -32,6 +32,7 @@ class TestPostEntitiesEntityAttrs(unittest.TestCase):
         payload = {
             "type": "Test", 
             "id": "test", 
+            "@context": [],
 
             "existing_property": {
                 "type": "Property", 
@@ -55,13 +56,14 @@ class TestPostEntitiesEntityAttrs(unittest.TestCase):
         self.assertEqual(len(r.json()), 1)
 
 
+
     def test_append_new_property(self):
 
         # Append a not yet existing property:
 
         property_name = "new_property"
-
-        payload_append = {property_name: "hello world"}
+        
+        payload_append = {property_name: {"type": "Property", "value": "hello world"}}
 
         r = requests.post(entitiesUrl + "test/attrs/", json=payload_append, auth=(username, password))
         self.assertEqual(r.status_code, 204)
@@ -72,7 +74,8 @@ class TestPostEntitiesEntityAttrs(unittest.TestCase):
         entity = r.json()
 
         self.assertEqual(property_name in r.json(), True)
-        self.assertEqual(entity[property_name], 'hello world')
+        self.assertEqual(entity[property_name]['value'], 'hello world')
+
 
 
     def test_overwrite_property_no_datasetid_overwrite(self):

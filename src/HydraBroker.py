@@ -12,7 +12,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 from .PsqlClient import PsqlClient
 
-from .ngsildutil import *
+from .NgsiLdUtil import *
 
 if sys.version_info[0] < 3:
     raise Exception("Hydra must be run with Python 3!")

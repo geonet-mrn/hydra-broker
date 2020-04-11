@@ -30,7 +30,7 @@ class TestPost(unittest.TestCase):
         entity = {
             "id": "test1",
             "type": "Test",
-            "@context": {},
+            "@context": [],
         }
 
         r = requests.post(entitiesUrl, json=entity, auth=(username, password))

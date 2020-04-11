@@ -25,7 +25,7 @@ import psycopg2
 #import psycopg2.extras # Required to use a cursur that returns rows as dictionaries with colum name keys
 import re
 
-from .ngsildutil import *
+from .NgsiLdUtil import *
 
 
 from .QueryParser import QueryParser
@@ -126,7 +126,7 @@ class PsqlClient:
         ################# BEGIN Iterate over fragment properties #################
         for key, new_value in entity_fragment.items():
             
-            if key == 'id' or key == 'type':
+            if key == 'id' or key == 'type' or key == '@context':
                 continue
 
             if key in existing_entity:
@@ -209,8 +209,9 @@ class PsqlClient:
             pieces = keyWithIndex.split('#')
 
             key = pieces[0]
-            
-            # TODO: 3 How to handle property arrays in the entity fragment?
+
+            if key == 'id' or key == 'type' or key == '@context':
+                continue
 
             # If the property does not exist in the existing entity:            
             if not key in existingEntity:

@@ -32,6 +32,7 @@ class TestPatchEntitiesEntityAttrs(unittest.TestCase):
         payload = {
             "type": "Test", 
             "id": "test", 
+            "@context": [],
 
             "existing_property": {
                 "type": "Property", 

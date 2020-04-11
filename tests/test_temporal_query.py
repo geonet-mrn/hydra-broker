@@ -35,7 +35,7 @@ class TemporalQueryTest(unittest.TestCase):
         entity = {
             "id": "test_datetime1",
             "type": "TestDateTime",
-            "@context": {},
+            "@context": [],
 
             "observedAt": {
                 "type": "Property",

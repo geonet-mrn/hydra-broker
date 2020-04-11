@@ -46,16 +46,16 @@ class TestEntityOperations(unittest.TestCase):
         #################### BEGIN Create entities #################
         # Create payload:
         payload = [{
-            "@context": {},
+            "@context": [],
             "id": "test1",
             "type": "Test",
-            "name": "Peter"
+            "name": {"type" : "Property", "value": "Peter"}
         },
         {
-            "@context": {},
+            "@context": [],
             "id": "test2",
             "type": "Test",
-            "name": "Paul"
+            "name": {"type" : "Property", "value": "Paul"}
         }]
 
         # POST entities:
@@ -76,16 +76,16 @@ class TestEntityOperations(unittest.TestCase):
         #################### BEGIN Create entities #################
         # Create payload:
         payload = [{
-            "@context": {},
+            "@context": [],
             "id": "test1",
             "type": "Test",
-            "name": "Peter"
+            "name": {"type" : "Property", "value": "Peter"}
         },
         {
-            "@context": {},
+            "@context": [],
             "id": "test2",
             "type": "Test",
-            "name": "Paul"
+            "name": {"type" : "Property", "value": "Paul"}
         }]
 
         # POST entities:
@@ -114,16 +114,16 @@ class TestEntityOperations(unittest.TestCase):
         #################### BEGIN Create entities #################
         # Create payload:
         payload = [{
-            "@context": {},
+            "@context": [],
             "id": "test1",
             "type": "Test",
-            "name": "Peter"
+            "name": {"type" : "Property", "value": "Peter"}
         },
         {
-            "@context": {},
+            "@context": [],
             "id": "test2",
             "type": "Test",
-            "name": "Paul"
+            "name": {"type" : "Property", "value": "Paul"}
         }]
 
         # POST entities:
@@ -139,10 +139,10 @@ class TestEntityOperations(unittest.TestCase):
          #################### BEGIN Upsert entities #################
         # Create payload:
         payload = [{
-            "@context": {},
+            "@context": [],
             "id": "test1",
             "type": "Test",
-            "name": "Mary"
+            "name": {"type" : "Property", "value": "Mary"}
         }]
 
         # POST upsert of existing entity with id 'test1':
@@ -154,7 +154,7 @@ class TestEntityOperations(unittest.TestCase):
 
         entity = r.json()
 
-        self.assertEqual(entity['name'], 'Mary')
+        self.assertEqual(entity['name']['value'], 'Mary')
 
         #################### END Upsert entities #################
        

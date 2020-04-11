@@ -29,7 +29,7 @@ class GeometryTest(unittest.TestCase):
         entity = {
             "id": "test_point",
             "type": "TestPoint",
-            "@context": {},
+            "@context": [],
 
             "location": {
                 "type": "GeoProperty",
@@ -49,7 +49,7 @@ class GeometryTest(unittest.TestCase):
         entity = {
             "id": "test_point2",
             "type": "TestPoint",
-            "@context": {},
+            "@context": [],
 
             "location": {
                 "type": "GeoProperty",
@@ -68,7 +68,7 @@ class GeometryTest(unittest.TestCase):
         entity = {
             "id": "test_multipolygon",
             "type": "TestMultiPolygon",
-            "@context": {},
+            "@context": [],
 
             "location": {
                 "type": "GeoProperty",

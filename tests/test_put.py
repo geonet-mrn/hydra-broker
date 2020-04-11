@@ -29,11 +29,11 @@ class TestPut(unittest.TestCase):
 
         #################### BEGIN Create entity #################
         # Create an entity:
-        entity = {
-            "@context": {},
+        entity = {            
             "id": "test1",
             "type": "Test",
-            "name": "Peter"
+            "@context": [],
+            "name": {"type" : "Property", "value": "Peter"}
         }
 
         r = requests.put(entityUrl, json=entity, auth=(username, password))
@@ -43,16 +43,16 @@ class TestPut(unittest.TestCase):
         r = requests.get(entityUrl, auth=(username, password))
 
         self.assertEqual(r.json()['id'], 'test1')
-        self.assertEqual(r.json()['name'], 'Peter')
+        self.assertEqual(r.json()['name']['value'], 'Peter')
         #################### END Create entity #################
 
         #################### BEGIN Replace entity and change name #################
         # Create an entity:
-        entity = {
-            "@context": {},
+        entity = {            
             "id": "test1",
             "type": "Test",
-            "name": "Dieter"
+            "@context": [],
+            "name": {"type" : "Property", "value": "Dieter"}
         }
 
         # PUT Entity:
@@ -63,7 +63,7 @@ class TestPut(unittest.TestCase):
         r = requests.get(entityUrl, auth=(username, password))
 
         self.assertEqual(r.json()['id'], 'test1')
-        self.assertEqual(r.json()['name'], 'Dieter')
+        self.assertEqual(r.json()['name']['value'], 'Dieter')
         #################### END Replace entity and change name #################
 
  

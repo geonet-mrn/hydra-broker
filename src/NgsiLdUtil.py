@@ -91,31 +91,97 @@ def validateDatetimeString(datetime):
     return regexp_dateTime_iso8601.match(datetime) or regexp_date_iso8601.match(datetime)
     
 
-################## BEGIN Validate entity ############### 
+############# BEGIN Validate entity according to NGSL-LD spec section 4.5.1 ############### 
 def validateEntity_object(entity):
 
     # TODO: 2 Check whether the error type here should really be "BadRequestData" or "InvalidRequest"
 
+    # NOTE: Actually, we shouldn't return NGSI-LD errors here since this is not an API function
+
     if not isinstance(entity, dict):
         return NgsiLdError("BadRequestData", "NGSI-LD entities are represented as JSON-LD dictionaries. However, the passed object is not a JSON-LD dictionary: " + str(entity))
 
-            
-    # Return errors according to NGSI-LD spec section 5.7.1.4
 
-    #if not '@context' in entity:
-    #    return NgsiLdError("BadRequestData", "Entity is missing '@context' property")
     
     if not 'id' in entity:
         return NgsiLdError("BadRequestData", "Entity is missing 'id' property.")
         
     if not 'type' in entity:
         return NgsiLdError("BadRequestData", "Entity is missing 'type' property.")
-        
+
+    if not '@context' in entity:
+        return NgsiLdError("BadRequestData", "Entity is missing '@context' property")
+
+    if not isinstance(entity['@context'], list):
+        return NgsiLdError("BadRequestData", "Member '@context' is not an array")
+
+
+    ################# BEGIN Validate properties ################
+    for key, value in entity.items():
+
+        # Skip required default properties (these are already checked above):
+        if key == 'id' or key == 'type' or key == '@context':
+            continue
+
+        error = validate_entity_member(entity[key])
+
+        if error != None:
+            return error
+
+
+    ################# END Validate properties ################
 
     return None
-################## END Validate entity ###############
+
+############# END Validate entity according to NGSL-LD spec section 4.5.1 ############### 
 
 
+
+############# BEGIN Validate entity property according to NGSL-LD spec section 4.5.2 ############### 
+def validate_entity_member(member):
+
+    # NOTE: A member can be a property or a relationship
+
+    if not isinstance(member, dict):
+        return NgsiLdError("BadRequestData", "Member is not a JSON object")
+
+    if not 'type' in member:
+        return NgsiLdError("BadRequestData", "Member is missing attribute 'type'")
+    
+
+    if member['type'] == 'GeoProperty':
+        if not 'value' in member:
+            return NgsiLdError("BadRequestData", "GeoProperty is missing attribute 'value'")
+
+    elif member['type'] == 'Property':
+
+        if not 'value' in member:
+            return NgsiLdError("BadRequestData", "Property is missing attribute 'value'")
+
+        if 'observedAt' in member and not validateDatetimeString(member['observedAt']):
+            return NgsiLdError("BadRequestData", "'observedAt' is not a valid ISO-8601 datetime string.")
+
+        if 'createdAt' in member and not validateDatetimeString(member['createdAt']):
+            return NgsiLdError("BadRequestData", "'createdAt' is not a valid ISO-8601 datetime string.")
+        
+        if 'modifiedAt' in member and not validateDatetimeString(member['modifiedAt']):
+            return NgsiLdError("BadRequestData", "'modifiedAt' is not a valid ISO-8601 datetime string.")
+        
+        # TODO: 3 Add remaining checks for optional attributes
+
+
+    elif member['type'] == 'Relationship':
+        # TODO: 2 Validate relationships
+
+        if not 'object' in member:
+            return NgsiLdError("BadRequestData", "Relationship is missing attribute 'object'")
+        
+    else:
+        return NgsiLdError("BadRequestData", "Invalid member type: " + member['type'])
+
+    return None
+############# END Validate entity property according to NGSL-LD spec section 4.5.2 ############### 
+    
 
 
 def validateGeoQuery(args):
