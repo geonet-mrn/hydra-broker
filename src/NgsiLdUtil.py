@@ -153,6 +153,22 @@ def validate_entity_member(member):
         if not 'value' in member:
             return NgsiLdError("BadRequestData", "GeoProperty is missing attribute 'value'")
 
+        geojson = member['value']
+
+        if not 'type' in geojson:
+            return NgsiLdError("BadRequestData", "GeoJSON is missing attribute 'value'")
+
+        geometryTypes = ['Point', 'MultiPoint', 'LineString', 'MultiLineString', 'Polygon', 'MultiPolygon']
+
+        if not geojson['type'] in geometryTypes:
+            return NgsiLdError("BadRequestData", "Invalid GeoJSON geometry type: " + geojson['type'])
+
+        if not 'coordinates' in geojson:
+            return NgsiLdError("BadRequestData", "GeoJSON is missing attribute 'coordinates'")
+
+        # TODO: 4 Validate coordinates (correct structure? Matching type?)
+
+
     elif member['type'] == 'Property':
 
         if not 'value' in member:
