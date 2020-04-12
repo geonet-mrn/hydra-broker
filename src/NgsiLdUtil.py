@@ -183,8 +183,21 @@ def validate_entity_member(member):
         if not 'coordinates' in geojson:
             return NgsiLdError("BadRequestData", "GeoJSON is missing attribute 'coordinates'")
 
-        # TODO: 4 Validate coordinates (correct structure? Matching type?)
+        coordinates = geojson['coordinates']
+        type == geojson['type']
 
+        if not isinstance(coordinates, list):
+            return NgsiLdError("BadRequestData", "GeoJSON 'coordinates' attribute is not an array.")
+
+        if type == 'Point':
+            for item in coords:
+                if not isinstance(item, numbers.Number):
+                    return NgsiLdError("BadRequestData", "Element in GeoJSON 'Point' type coordinates array is not a number: " + item)
+        
+        # TODO: 3 Implement checking or remaining GeoJSON geometry types
+
+
+    
 
     elif member['type'] == 'Property':
 
