@@ -4,7 +4,7 @@
 
 from .test_existence_of_endpoints import *
 
-'''
+
 from .test_post_entities_entity_attrs import *
 from .test_patch_entities_entity_attrs import *
 
@@ -18,4 +18,4 @@ from .test_post import *
 from .test_put import *
 from .test_temporal_entities import *
 from .test_xdatatogo import *
-'''
+
