@@ -39,7 +39,7 @@ class TemporalQueryTest(unittest.TestCase):
 
             "observedAt": {
                 "type": "Property",
-                "value": "2020-04-10T16:47+00:00"
+                "value": "2020-04-10T16:47:00Z"
                 }
             }
 
@@ -57,21 +57,22 @@ class TemporalQueryTest(unittest.TestCase):
         
 
         # Nothing should be found:
-        r = requests.get(entitiesUrl + "?timerel=before&time=" + urllib.parse.quote("2010-08-31"), auth=(username, password))
+        r = requests.get(entitiesUrl + "?timerel=before&time=" + urllib.parse.quote("2010-08-31T00:00:00Z"), auth=(username, password))
+        print(r.text)
         self.assertEqual(r.status_code, 200)
         self.assertEqual(len(r.json()), 0)
         
         # The created test entity should be found since it fits the passed time frame:
-        r = requests.get(entitiesUrl + "?timerel=after&time=" + urllib.parse.quote("2010-08-31"), auth=(username, password))
+        r = requests.get(entitiesUrl + "?timerel=after&time=" + urllib.parse.quote("2010-08-31T00:00:00Z"), auth=(username, password))
         self.assertEqual(r.status_code, 200)
         self.assertEqual(len(r.json()), 1)
 
         # The created test entity should be found since it fits the passed time frame:
-        r = requests.get(entitiesUrl + "?timerel=between&time=" + urllib.parse.quote("2010-08-31") + "&endtime=" + urllib.parse.quote("2022-08-31"), auth=(username, password))
+        r = requests.get(entitiesUrl + "?timerel=between&time=" + urllib.parse.quote("2010-08-31T00:00:00Z") + "&endtime=" + urllib.parse.quote("2022-08-31T00:00:00Z"), auth=(username, password))
         self.assertEqual(r.status_code, 200)
         self.assertEqual(len(r.json()), 1)
 
         # Nothing should exist in this time period:
-        r = requests.get(entitiesUrl + "?timerel=between&time=" + urllib.parse.quote("2022-08-31") + "&endtime=" + urllib.parse.quote("2025-08-31"), auth=(username, password))
+        r = requests.get(entitiesUrl + "?timerel=between&time=" + urllib.parse.quote("2022-08-31T00:00:00Z") + "&endtime=" + urllib.parse.quote("2025-08-31T00:00:00Z"), auth=(username, password))
         self.assertEqual(len(r.json()), 0)
         

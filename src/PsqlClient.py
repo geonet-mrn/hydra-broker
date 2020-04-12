@@ -322,6 +322,17 @@ class PsqlClient:
 
 
 
+    # TODO: 2 Implement
+    def api_patchEntityAttributeById(self, entityId, attrId):
+        return None, NgsiLdError("OperationNotSupported", "This operation is not implemented yet.")
+
+    # TODO: 2 Implement
+    def api_deleteEntityAttributeById(self, entityId, attrId, deleteAll, datasetId):
+        return None, NgsiLdError("OperationNotSupported", "This operation is not implemented yet.")
+
+
+
+
     ########################## BEGIN 5.6.8 - Batch Entity Creation or Update (Upsert) #####################
     def api_entityOperationsUpsert(self, json_ld, options = "replace"):
 
@@ -431,7 +442,7 @@ class PsqlClient:
     
 
 
-    ############## BEGIN 5.6.11 - Create of Update Temporal Representation of an Entity #############
+    ############## BEGIN 5.6.11 - Create or Update Temporal Representation of an Entity #############
 
     def api_upsertTemporalEntities(self, json_ld):
 
@@ -460,7 +471,43 @@ class PsqlClient:
 
         # TODO: 2 Implement
 
-    ############## END 5.6.11 - Create of Update Temporal Representation of an Entity #############
+    ############## END 5.6.11 - Create or Update Temporal Representation of an Entity #############
+
+
+    ############## BEGIN 5.6.12 -  Add Attributes to Temporal Representation of an Entity #############
+    def api_addTemporalEntityAttributes(self, entityId):
+        # TODO: 2 Implement
+        return None, NgsiLdError("OperationNotSupported", "This operation is not implemented yet.")
+    ############## END 5.6.12 -  Add Attributes to Temporal Representation of an Entity #############
+
+
+    ############## BEGIN 5.6.13 - Delete Attribute from Temporal Representation of an Entity #############
+    def api_deleteTemporalEntityAttributeById(self, entityId, attrId):
+        # TODO: 2 Implement
+        return None, NgsiLdError("OperationNotSupported", "This operation is not implemented yet.")
+
+    ############## END 5.6.13 - Delete Attribute from Temporal Representation of an Entity #############
+
+    
+    ############## BEGIN 5.6.14 - Modify attribute instance from Temporal Representation of an Entity #############
+    def api_modifyTemporalEntityAttributeInstance(self, entityId, attrId, instanceId):
+        # TODO: 2 Implement
+        return None, NgsiLdError("OperationNotSupported", "This operation is not implemented yet.")
+    ############## END 5.6.14 - Modify attribute instance from Temporal Representation of an Entity #############
+
+
+    ############## BEGIN 5.6.15 - Delete attribute instance from Temporal Representation of an Entity #############
+    def api_deleteTemporalEntityAttributeInstance(self, entityId, attrId, instanceId):
+        # TODO: 2 Implement
+        return None, NgsiLdError("OperationNotSupported", "This operation is not implemented yet.")
+    ############## END 5.6.15 - Delete attribute instance from Temporal Representation of an Entity #############
+
+
+    ############### BEGIN 5.6.16 - Delete Temporal Representation of an Entity ################
+    def api_deleteTemporalEntityById(self, entityId):
+        # TODO: 2 Implement
+        return None, NgsiLdError("OperationNotSupported", "This operation is not implemented yet.")
+    ############### END 5.6.16 - Delete Temporal Representation of an Entity ################
 
 
 

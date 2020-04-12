@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 
 # TODO: 3 Implement "/entities/<entityId>/attrs"
+# TODO: 4 Implement 6.3.11
+# TODO: 4 Implement 6.3.12
+# TODO: 3 Implement context sources (NGSI-LD spec section 6.8 to 6.13)
+# TODO: 3 Implement 6.20
+# TODO: 3 Implement 6.21
 
 import os
 import json
@@ -60,10 +65,17 @@ def getEntities():
     return createResponse(backend.api_queryEntities(request.args))
 
 
+
+
 # 6.5.3.1 - GET /entities/<entityId>:
 @app.route(urlBasePath + "/entities/<entityId>", methods=['GET'])
 def getEntityById(entityId):
-    return createResponse(backend.api_getEntityById(entityId, request.args))
+
+    attrs = None
+    if 'attrs' in request.args:
+        attrs = request.args
+
+    return createResponse(backend.api_getEntityById(entityId, attrs))
 
 
 # 6.5.3.2 - DELETE /entities/<entityId>:
@@ -71,6 +83,8 @@ def getEntityById(entityId):
 @auth.login_required
 def deleteEntityById(entityId):
     return createResponse(backend.api_deleteEntity(entityId))
+
+
 
 
 # 6.6.3.1 - POST /entities/<entityId>/attrs/:
@@ -85,11 +99,38 @@ def postEntityAttributes(entityId):
     return createResponse(backend.api_appendEntityAttributes(entityId, request.data, overwrite))
 
 
-# 6.6.3.3 - PATCH /entities/<entityId>/attrs/:
+# 6.6.3.2 - PATCH /entities/<entityId>/attrs/:
 @app.route(urlBasePath + "/entities/<entityId>/attrs/", methods=['PATCH'])
 @auth.login_required
 def patchEntityAttributes(entityId):
     return createResponse(backend.api_updateEntityAttributes(entityId, request.data))
+
+
+
+
+# 6.7.3.1 - PATCH /entities/<entityId>/attrs/<attrId>:
+@app.route(urlBasePath + "/entities/<entityId>/attrs/<attrId>", methods=['PATCH'])
+@auth.login_required
+def patchEntityAttributeById(entityId, attrId):
+    return createResponse(backend.api_patchEntityAttributeById(entityId, attrId))
+
+
+# 6.7.3.2 - DELETE /entities/<entityId>/attrs/<attrId>:
+@app.route(urlBasePath + "/entities/<entityId>/attrs/<attrId>", methods=['DELETE'])
+@auth.login_required
+def deleteEntityAttributeById(entityId, attrId):
+
+    deleteAll = False
+    if 'deleteAll' in request.args:
+        deleteAll = request.args['deleteAll']
+
+    datasetId = None
+    if 'datasetId' in request.args:
+        datasetId = request.args['datasetId']
+
+    return createResponse(backend.api_deleteEntityAttributeById(entityId, attrId, deleteAll, datasetId))
+
+
 
 
 # 6.14.3.1 - POST entityOperations/create:
@@ -116,7 +157,7 @@ def entityOperationsDelete():
 
 
 
-
+# TODO: 3 Implement context sources (NGSI-LD spec section 6.8 to 6.13)
 
 
 # 6.18.3.1 - POST temporal/entities/:
@@ -132,10 +173,43 @@ def getTemporalEntities():
     return createResponse(backend.api_getTemporalEntities(request.args))
 
 
-# 6.5.3.1 - GET temporal/entities/<entityId>:
+
+
+# 6.19.3.1 - GET temporal/entities/<entityId>:
 @app.route(urlBasePath + "/temporal/entities/<entityId>", methods=['GET'])
 def getTemporalEntityById(entityId):
     return createResponse(backend.api_getTemporalEntityById(entityId, request.args))
+
+
+# 6.19.3.2 - DELETE temporal/entities/<entityId>:
+@app.route(urlBasePath + "/temporal/entities/<entityId>", methods=['DELETE'])
+def deleteTemporalEntityById(entityId):
+    return createResponse(backend.api_deleteTemporalEntityById(entityId))
+
+
+
+# 6.20.3.1 - POST temporal/entities/<entityId>/attrs/:
+@app.route(urlBasePath + "/temporal/entities/<entityId>/attrs/", methods=['POST'])
+def postTemporalEntityAttributes(entityId):
+    return createResponse(backend.api_addTemporalEntityAttributes(entityId))
+
+
+# 6.21.3.1 - DELETE temporal/entities/<entityId>/attrs/<attrId>:
+@app.route(urlBasePath + "/temporal/entities/<entityId>/attrs/<attrId>", methods=['DELETE'])
+def deleteTemporalEntityAttributeById(entityId, attrId):
+    return createResponse(backend.api_deleteTemporalEntityAttributeById(entityId, attrId))
+
+
+# 6.22.3.1 - PATCH temporal/entities/<entityId>/attrs/<attrId>/<instanceId>:
+@app.route(urlBasePath + "/temporal/entities/<entityId>/attrs/<attrId>/<instanceId>", methods=['PATCH'])
+def patchTemporalEntityAttributeInstance(entityId, attrId, instanceId):
+    return createResponse(backend.api_modifyTemporalEntityAttributeInstance(entityId, attrId, instanceId))
+
+
+# 6.22.3.2 - DELETE temporal/entities/<entityId>/attrs/<attrId>/<instanceId>:
+@app.route(urlBasePath + "/temporal/entities/<entityId>/attrs/<attrId>/<instanceId>", methods=['DELETE'])
+def deleteTemporalEntityAttributeInstance(entityId, attrId, instanceId):
+    return createResponse(backend.api_deleteTemporalEntityAttributeInstance(entityId, attrId, instanceId))
 
 ###################### END Official endpoints as defined by NGSI-LD specification #######################
 

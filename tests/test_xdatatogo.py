@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import requests, sys, os
+import requests
+import sys
+import os
 import unittest
 import urllib.parse
 
@@ -10,10 +12,11 @@ password = os.environ["PASSWORD"]
 
 entitiesUrl = ngsiBaseUrl + "ngsi-ld/v1/entities/"
 
+
 class TestXDataToGo(unittest.TestCase):
 
     def setUp(self):
-        
+
         # DELETE all entities:
         r = requests.delete(entitiesUrl, auth=(username, password))
         self.assertEqual(r.status_code, 204)
@@ -23,7 +26,7 @@ class TestXDataToGo(unittest.TestCase):
         # ... should return an empty list:
         self.assertEqual(len(r.json()), 0)
 
-    
+
     def test_post_RoadRestrictions(self):
 
         entity = {
@@ -31,14 +34,17 @@ class TestXDataToGo(unittest.TestCase):
             "type": "VehicleRestrictions",
             "@context": [],
 
-            "vehicleRestrictions" : {
-                "type" : "Property",
+            "vehicleRestrictions": {
+                "type": "Property",
                 "value": {
-                    "maxLength_m" : 25,
-                    "maxWidth_m" : 3.5,
-                    "maxHeight_m" : 4.5,
-                    "maxWidth_m" : 3.5,
-                    "axleLoad_kg" : 12000
+                    "@type": "VehicleRestrictions",
+                    "@value": {
+                        "maxLength_m": 25,
+                        "maxWidth_m": 3.5,
+                        "maxHeight_m": 4.5,
+                        "maxWidth_m": 3.5,
+                        "axleLoad_kg": 12000
+                    }
                 }
             }
         }
