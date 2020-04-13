@@ -303,24 +303,11 @@ class PsqlClient:
     ############################# BEGIN 5.6.6 - Delete Entity ###############################
     def api_deleteEntity(self, id):
 
-        ############# BEGIN Check if entity with the passed ID exists ###########
-        result, error = self.getEntityById(id)
-
-        if error != None:
-            # TODO: 3 Correct status code for this?
-            return None, error
-        ############# END Check if entity with the passed ID exists ###########
-
-        # Delete geometry table rows:
-        self.query("DELETE FROM %s WHERE eid = '%s'" % (self.config['db_table_geom'], id))
-
-        # Delete main table row:        
-        self.query("DELETE FROM %s WHERE id = '%s'" % (self.config['db_table_data'], id))
-
-        return NgsiLdResult(None, 204), None
+        return self.deleteEntityById(id)
+       
     ############################# END 5.6.6 - Delete Entity ###############################
 
-
+  
 
     # TODO: 2 Implement
     def api_patchEntityAttributeById(self, entityId, attrId):
@@ -517,10 +504,276 @@ class PsqlClient:
     #################### END 5.7.1 - Retrieve Entity ######################
 
 
+    def api_queryEntities(self, args):
+        return self.queryEntities(args)
+
+
+    ############## BEGIN 5.7.3 - Retrieve temporal evolution of an Entity #############
+    def api_getTemporalEntityById(self, entityId, args):
+
+        # 5.7.3.4:
+
+        # TODO: 2 check entityID -> if not present or valid, return BadRequestData error
+
+        # Try to retrieve requested entity by id:
+        #entity, responseCode, error = self.api_getEntityById(entityId)
+        result, error = self.getEntityById(entityId)
+
+        if error != None:
+            return None, error
+
+        existingEntity = result.payload
+
+        isTemporalQuery = validateTemporalQuery(args)
+
+        if isTemporalQuery:
+            pass
+        
+        return NgsiLdResult(createEntityTemporal(existingEntity, args), 200), None
+
+
+        pass
+    ############## END 5.7.3 - Retrieve temporal evolution of an Entity #############
+
+
+    ############## BEGIN 5.7.4 - Query temporal evolution of entities #############
+
+    def api_getTemporalEntities(self, args):
+
+        isTemporalQuery, error = validateTemporalQuery(args)
+
+        # NGSI-LD spec section 5.7.4.4:
+
+        if not isTemporalQuery or error != None:
+            return None, error
+
+        
+
+        # 201 - Created
+        # 204 - Updated
+        return NgsiLdResult(None, 201), None
+        #existingEntity = self.getEntityById
+
+        # TODO: 2 Implement
+
+    ############## END 5.7.4 - Query temporal evolution of entities #############
+
+    ################################### END Official API methods ###################################
     
 
+
+
+
+
+
+
+
+
+
+
+    ################### BEGIN Inofficial API methods (not part of NGSI-LD specification!) ###################
+
+
+    ######### BEGIN Delete all entities (inofficial, only for testing!) ########
+    def api_inofficial_deleteEntities(self):
+        return self.deleteAllEntities()        
+        
+    ######### END Delete all entities (inoffocial, only for testing!) ##########
+
+
+   
+
+    ######### BEGIN Upsert entity (inofficial!) ############    
+    def api_inofficial_upsertEntity(self, json_ld):      
+
+        error = validateJsonLd(json_ld)
+
+        if error != None:
+            return None, error
+  
+     
+        entity = json.loads(json_ld)
+
+        error = validateEntity_object(entity)
+
+        if error != None:
+            return None, error
+
+      
+        # TODO: 4 Implement real upsert instead of delete+create
+        
+        existingEntity = self.getEntityById(entity['id'])
+
+        if existingEntity != None:            
+            result, error = self.api_deleteEntity(entity['id'])
+        
+        
+        # TODO: 3 Return different status code for update/creation here?
+
+        return self.createEntity_object(entity)
+
+    ######### END Upsert entity (inofficial!) ###############
+
+    ################### END Inofficial API methods (not part of NGSI-LD specification!) ###################
+
+
+
+
+
+
+
+
+    ############################# BEGIN Create Entity by object ################################     
+    
+    # ATTENTION: This method expects a Python object, *not* an NGSI-LD string!
+         
+    def createEntity_object(self, entity):        
+    
+        error = validateEntity_object(entity)
+
+        if error != None:
+            return None, error
+
+
+        # TODO: 3 Add system-generated property 'createdAt' (see NGSI-LD spec 4.5.2)
+        # TODO: 3 Add system-generated property 'modifiedAt' (see NGSI-LD spec 4.5.2)
+
+        # TODO: 3 Check datetime conformity as defined in NGSI-LD spec 4.6.3
+
+
+        ################ BEGIN Write main table entry ##############
+        insertQuery = InsertQuery(self.config['db_table_data'])
+
+        insertQuery.add("id", entity['id'], "%s")
+        insertQuery.add("type", entity['type'], "%s")
+        insertQuery.add("json_data", json.dumps(entity), "%s")
+        
+        # Write main table entry:
+        try:
+            self.query(insertQuery.getString(), insertQuery.values)
+        except psycopg2.IntegrityError:
+
+            return None, NgsiLdError("AlreadyExists", f"An entity with id {entity['id']} already exists.")
+            
+        
+        except Exception as e:
+            return None, NgsiLdError("InternalError","An unspecified database error occured while trying to create the entity.")
+            
+            
+        finally:
+            self.dbconn.commit()
+        ################ END Write main table entry ##############
+        
+
+        ################## BEGIN Process GeoProperties ################
+        # Delete all old geometry table entries for this entity's id:
+        self.query("DELETE FROM %s WHERE eid = '%s'" % (self.config['db_table_geom'], entity['id']))
+
+        ################### BEGIN Write new geo properties ###############
+        for key in entity:
+            
+            prop = entity[key]
+
+            ############ BEGIN Check if property is a GeoProperty ###########
+            if not type(prop) is dict:
+                continue
+
+            if not 'type' in prop:
+                continue
+
+            if prop['type'] != 'GeoProperty':
+                continue
+            ############ END Check if property is a GeoProperty ###########
+
+            geojson = prop['value']
+
+            insertQuery_geom = InsertQuery(self.config['db_table_geom'])
+
+            # Add values to geometry insert query:
+            insertQuery_geom.add("eid", entity['id'], "%s")
+            insertQuery_geom.add("property", key, "%s")
+            insertQuery_geom.add("geom", json.dumps(geojson), "ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326)")
+        
+            # TODO: 2 Catch error that might happen if ID already exists
+            self.query(insertQuery_geom.getString(), insertQuery_geom.values)
+        ################### END Write new geo properties ###############
+
+        ################## END Process GeoProperties ################
+        
+        return NgsiLdResult(None, 201), None
+    ######################### END Create Entity by object #############################        
+
+
+
+    def deleteAllEntities(self):
+        self.query("DELETE FROM %s"  % (self.config['db_table_data']))
+        self.query("DELETE FROM %s"  % (self.config['db_table_geom']))
+        
+        return NgsiLdResult(None, 204), None
+
+
+
+    def deleteEntityById(self, id):
+        ############# BEGIN Check if entity with the passed ID exists ###########
+        result, error = self.getEntityById(id)
+
+        if error != None:
+            # TODO: 3 Correct status code for this?
+            return None, error
+        ############# END Check if entity with the passed ID exists ###########
+
+        # Delete geometry table rows:
+        self.query("DELETE FROM %s WHERE eid = '%s'" % (self.config['db_table_geom'], id))
+
+        # Delete main table row:        
+        self.query("DELETE FROM %s WHERE id = '%s'" % (self.config['db_table_data'], id))
+
+        return NgsiLdResult(None, 204), None
+
+
+    #################### BEGIN 5.7.1 - Retrieve Entity ######################
+    def getEntityById(self, id, args = []):
+
+        # TODO: 2 Implement "attrs" parameter (see NGSI-LD spec 6.5.3.1-1)    
+        
+        rows = self.query("SELECT json_data FROM %s WHERE id = '%s'" % (self.config['db_table_data'], id))
+
+        if len(rows) == 0:
+            return None, NgsiLdError("ResourceNotFound", "No entity with id '" + id + "' found.")
+        
+        elif len(rows) > 1:
+            return None, NgsiLdError("InternalError", "Multiple entities with id '" + id + "' found. This is a database inconsistency and should never happen.")
+               
+        return NgsiLdResult(rows[0][0], 200), None
+       
+    #################### END 5.7.1 - Retrieve Entity ######################
+
+
+    ####################### BEGIN PSQL query method #######################
+    def query(self, query, values=None):
+
+        result = None
+
+        if values != None:
+            self.cursor.execute(query, values)
+        else:
+            self.cursor.execute(query)
+
+        try:
+            result = self.cursor.fetchall()            
+        except:
+            pass
+
+        self.dbconn.commit()
+
+        return result
+    ####################### END PSQL query method #######################
+
+
+
+
     #################### BEGIN 5.7.2 - Query Entities ####################
-    def api_queryEntities(self, args):        
+    def queryEntities(self, args):        
 
         t1 = self.config['db_table_data']
         t2 = self.config['db_table_geom']
@@ -704,13 +957,6 @@ class PsqlClient:
 
         ############################ END Build SQL query ########################
         
-        #sql_query = "SELECT %s.json_data, %s.property as geoproperty, %s.geom as geom FROM %s, %s" % (t1, t2, t2, t1, t2)
-        #sql_query = "SELECT * FROM %s, %s" % (t1, t1, t2)
-        
-        
-        
-
-      
 
         # Perform PSQL query:
         rows = self.query(sql_query)
@@ -774,243 +1020,6 @@ class PsqlClient:
     #################### END 5.7.2 - Query Entities ####################
 
 
-    ############## BEGIN 5.7.3 - Retrieve temporal evolution of an Entity #############
-    def api_getTemporalEntityById(self, entityId, args):
-
-        # 5.7.3.4:
-
-        # TODO: 2 check entityID -> if not present or valid, return BadRequestData error
-
-        # Try to retrieve requested entity by id:
-        #entity, responseCode, error = self.api_getEntityById(entityId)
-        result, error = self.getEntityById(entityId)
-
-        if error != None:
-            return None, error
-
-        existingEntity = result.payload
-
-        isTemporalQuery = validateTemporalQuery(args)
-
-        if isTemporalQuery:
-            pass
-        
-        return NgsiLdResult(createEntityTemporal(existingEntity, args), 200), None
-
-
-        pass
-    ############## END 5.7.3 - Retrieve temporal evolution of an Entity #############
-
-
-    ############## BEGIN 5.7.4 - Query temporal evolution of entities #############
-
-    def api_getTemporalEntities(self, args):
-
-        isTemporalQuery, error = validateTemporalQuery(args)
-
-        # NGSI-LD spec section 5.7.4.4:
-
-        if not isTemporalQuery or error != None:
-            return None, error
-
-        
-
-        # 201 - Created
-        # 204 - Updated
-        return NgsiLdResult(None, 201), None
-        #existingEntity = self.getEntityById
-
-        # TODO: 2 Implement
-
-    ############## END 5.7.4 - Query temporal evolution of entities #############
-
-    ################################### END Official API methods ###################################
-    
-
-
-
-
-
-
-
-
-
-
-
-    ################### BEGIN Inofficial API methods (not part of NGSI-LD specification!) ###################
-
-
-    ######### BEGIN Delete all entities (inofficial, only for testing!) ########
-    def api_inofficial_deleteEntities(self):
-                
-        self.query("DELETE FROM %s"  % (self.config['db_table_data']))
-        self.query("DELETE FROM %s"  % (self.config['db_table_geom']))
-        
-        return NgsiLdResult(None, 204), None
-    ######### END Delete all entities (inoffocial, only for testing!) ##########
-
-
-    ######### BEGIN Upsert entity (inofficial!) ############    
-    def api_inofficial_upsertEntity(self, json_ld):      
-
-        error = validateJsonLd(json_ld)
-
-        if error != None:
-            return None, error
-  
-     
-        entity = json.loads(json_ld)
-
-        error = validateEntity_object(entity)
-
-        if error != None:
-            return None, error
-
-      
-        # TODO: 4 Implement real upsert instead of delete+create
-        
-        existingEntity = self.getEntityById(entity['id'])
-
-        if existingEntity != None:            
-            result, error = self.api_deleteEntity(entity['id'])
-        
-        
-        # TODO: 3 Return different status code for update/creation here?
-
-        return self.createEntity_object(entity)
-
-    ######### END Upsert entity (inofficial!) ###############
-
-    ################### END Inofficial API methods (not part of NGSI-LD specification!) ###################
-
-
-
-
-
-
-
-
-    ############################# BEGIN Create Entity by object ################################     
-    
-    # ATTENTION: This method expects a Python object, *not* an NGSI-LD string!
-         
-    def createEntity_object(self, entity):        
-    
-        error = validateEntity_object(entity)
-
-        if error != None:
-            return None, error
-
-
-        # TODO: 3 Add system-generated property 'createdAt' (see NGSI-LD spec 4.5.2)
-        # TODO: 3 Add system-generated property 'modifiedAt' (see NGSI-LD spec 4.5.2)
-
-        # TODO: 3 Check datetime conformity as defined in NGSI-LD spec 4.6.3
-
-
-        ################ BEGIN Write main table entry ##############
-        insertQuery = InsertQuery(self.config['db_table_data'])
-
-        insertQuery.add("id", entity['id'], "%s")
-        insertQuery.add("type", entity['type'], "%s")
-        insertQuery.add("json_data", json.dumps(entity), "%s")
-        
-        # Write main table entry:
-        try:
-            self.query(insertQuery.getString(), insertQuery.values)
-        except psycopg2.IntegrityError:
-
-            return None, NgsiLdError("AlreadyExists", f"An entity with id {entity['id']} already exists.")
-            
-        
-        except Exception as e:
-            return None, NgsiLdError("InternalError","An unspecified database error occured while trying to create the entity.")
-            
-            
-        finally:
-            self.dbconn.commit()
-        ################ END Write main table entry ##############
-        
-
-        ################## BEGIN Process GeoProperties ################
-        # Delete all old geometry table entries for this entity's id:
-        self.query("DELETE FROM %s WHERE eid = '%s'" % (self.config['db_table_geom'], entity['id']))
-
-        ################### BEGIN Write new geo properties ###############
-        for key in entity:
-            
-            prop = entity[key]
-
-            ############ BEGIN Check if property is a GeoProperty ###########
-            if not type(prop) is dict:
-                continue
-
-            if not 'type' in prop:
-                continue
-
-            if prop['type'] != 'GeoProperty':
-                continue
-            ############ END Check if property is a GeoProperty ###########
-
-            geojson = prop['value']
-
-            insertQuery_geom = InsertQuery(self.config['db_table_geom'])
-
-            # Add values to geometry insert query:
-            insertQuery_geom.add("eid", entity['id'], "%s")
-            insertQuery_geom.add("property", key, "%s")
-            insertQuery_geom.add("geom", json.dumps(geojson), "ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326)")
-        
-            # TODO: 2 Catch error that might happen if ID already exists
-            self.query(insertQuery_geom.getString(), insertQuery_geom.values)
-        ################### END Write new geo properties ###############
-
-        ################## END Process GeoProperties ################
-        
-        return NgsiLdResult(None, 201), None
-    ######################### END Create Entity by object #############################        
-
-
-    #################### BEGIN 5.7.1 - Retrieve Entity ######################
-    def getEntityById(self, id, args = []):
-
-        # TODO: 2 Implement "attrs" parameter (see NGSI-LD spec 6.5.3.1-1)    
-        
-        rows = self.query("SELECT json_data FROM %s WHERE id = '%s'" % (self.config['db_table_data'], id))
-
-        if len(rows) == 0:
-            return None, NgsiLdError("ResourceNotFound", "No entity with id '" + id + "' found.")
-        
-        elif len(rows) > 1:
-            return None, NgsiLdError("InternalError", "Multiple entities with id '" + id + "' found. This is a database inconsistency and should never happen.")
-               
-        return NgsiLdResult(rows[0][0], 200), None
-       
-    #################### END 5.7.1 - Retrieve Entity ######################
-
-
-    ####################### BEGIN PSQL query method #######################
-    def query(self, query, values=None):
-
-        result = None
-
-        if values != None:
-            self.cursor.execute(query, values)
-        else:
-            self.cursor.execute(query)
-
-        try:
-            result = self.cursor.fetchall()            
-        except:
-            pass
-
-        self.dbconn.commit()
-
-        return result
-    ####################### END PSQL query method #######################
-
-
-
 
 
     ######################### BEGIN Upsert entity #############################    
@@ -1023,7 +1032,7 @@ class PsqlClient:
 
       
         # TODO: 4 Implement real upsert instead of delete+create
-        self.api_deleteEntity(entity['id'])
+        self.deleteEntityById(entity['id'])
         
         #response, statusCode, error = self.createEntity_object(entity)
         result, error = self.createEntity_object(entity)
