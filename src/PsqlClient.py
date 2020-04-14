@@ -44,7 +44,7 @@ class PsqlClient:
 
         entity = json.loads(json_ld)
      
-        return self.backend.createEntity_object(entity)
+        return self.backend.write_entity(entity)
     ############################# END 5.6.1 - Create Entity ################################        
 
 
@@ -54,7 +54,7 @@ class PsqlClient:
         # TODO: 2 Validate entity ID
 
         ############### BEGIN Try to fetch entity from database ###############
-        result, error = self.backend.getEntityById(entity_id)
+        result, error = self.backend.get_entity_by_id(entity_id)
         
         if result == None:
             return None, NgsiLdError("ResourceNotFound", "An entity with the passed ID does not exist: " + entity_id)
@@ -98,7 +98,7 @@ class PsqlClient:
         ################# END Iterate over fragment properties #################
 
         # Write changes to database:
-        result, error = self.backend.upsertEntity_object(existing_entity)
+        result, error = self.upsert_entity(existing_entity, temporal = False)
 
         if error != None:
             return None, error
@@ -120,7 +120,7 @@ class PsqlClient:
         # TODO: 2 Validate entity ID
         
         ############### BEGIN Try to fetch entity from database ###############
-        result, error = self.backend.getEntityById(entity_id)
+        result, error = self.backend.get_entity_by_id(entity_id)
         
         if result == None:
             return None, NgsiLdError("ResourceNotFound", "An entity with the passed ID does not exist: " + entity_id)
@@ -240,7 +240,7 @@ class PsqlClient:
            
         ################## END Iterate over entity fragment ################
 
-        result, error = self.backend.upsertEntity_object(existingEntity)
+        result, error = self.upsert_entity(existingEntity, temporal = False)
 
         if error != None:
             return None, error
@@ -257,7 +257,7 @@ class PsqlClient:
     ############################# BEGIN 5.6.6 - Delete Entity ###############################
     def api_deleteEntity(self, id):
 
-        return self.backend.deleteEntityById(id)
+        return self.backend.delete_entity_by_id(id)
        
     ############################# END 5.6.6 - Delete Entity ###############################
 
@@ -301,7 +301,7 @@ class PsqlClient:
 
         ########### BEGIN Validate entities in request payload list ###########
         for entity in entities:            
-            error = validateEntity_object(entity)
+            error = validate_entity(entity, temporal = False)
             if error != None:
                 return None, error
         ########### END Validate entities in request payload list ###########
@@ -315,7 +315,7 @@ class PsqlClient:
 
             id = newEntity['id']
 
-            result, error = self.backend.getEntityById(id)
+            result, error = self.backend.get_entity_by_id(id)
 
             if result != None:
 
@@ -328,10 +328,10 @@ class PsqlClient:
                     # TODO: 2 Use upsert_entity_object method here?
                     
                     # Delete old entity:
-                    self.backend.deleteEntityById(id)
+                    self.backend.delete_entity_by_id(id)
                     
                     # Write new entity:
-                    self.backend.createEntity_object(newEntity)
+                    self.backend.write_entity(newEntity)
                 
                 elif options == "update":
                     # Append attributes as specified in 5.6.3:
@@ -340,7 +340,7 @@ class PsqlClient:
 
             else:
                 # Write new entity:
-                self.backend.createEntity_object(newEntity)
+                self.backend.write_entity(newEntity)
                                 
             success.append(id)
         ################## END Loop over entities in payload ###############
@@ -374,7 +374,7 @@ class PsqlClient:
 
         ############ BEGIN Check all passed entities for errors before starting to write any of them #########
         for id in listOfIds:
-            self.backend.deleteEntityById(id)
+            self.backend.delete_entity_by_id(id)
         ############ END Check all passed entities for errors before starting to write any of them #########
 
         return NgsiLdResult(None, 200), None
@@ -437,7 +437,7 @@ class PsqlClient:
         entity_temporal_fragment = json.loads(json_ld)
 
         ############# BEGIN Validate temporal entity fragment #############
-        error = validate_entity_temporal(entity_temporal_fragment)
+        error = validate_entity(entity_temporal_fragment, temporal = True)
 
         if error != None:
             return None, error
@@ -445,7 +445,7 @@ class PsqlClient:
 
 
         ############## BEGIN Try to fetch existing entity ###############
-        result, error = self.backend.getEntityById(entity_id)
+        result, error = self.backend.get_entity_by_id(entity_id)
 
         if result == None:            
             return None, NgsiLdError("ResourceNotFound", "An entity with the passed ID does not exist: " + entity_id)
@@ -490,7 +490,7 @@ class PsqlClient:
             existing_entity[key].extend(value)
 
 
-        result, error = self.backend.upsertEntity_object(existing_entity)
+        result, error = self.upsert_entity(existing_entity, temporal = True)
 
         if error != None:
             return None, error
@@ -535,12 +535,12 @@ class PsqlClient:
 
     #################### BEGIN 5.7.1 - Retrieve Entity ######################
     def api_getEntityById(self, id, args = []):
-        return self.backend.getEntityById(id, args)
+        return self.backend.get_entity_by_id(id, args)
     #################### END 5.7.1 - Retrieve Entity ######################
 
 
     def api_queryEntities(self, args):
-        return self.backend.queryEntities(args)
+        return self.backend.query_entities(args)
 
 
     ############## BEGIN 5.7.3 - Retrieve temporal evolution of an Entity #############
@@ -552,7 +552,7 @@ class PsqlClient:
 
         # Try to retrieve requested entity by id:
         #entity, responseCode, error = self.api_getEntityById(entityId)
-        result, error = self.backend.getEntityById(entityId)
+        result, error = self.backend.get_entity_by_id(entityId)
 
         if error != None:
             return None, error
@@ -624,7 +624,7 @@ class PsqlClient:
      
         entity = json.loads(json_ld)
 
-        error = validateEntity_object(entity)
+        error = validate_entity(entity, temporal = False)
 
         if error != None:
             return None, error
@@ -632,18 +632,56 @@ class PsqlClient:
       
         # TODO: 4 Implement real upsert instead of delete+create
         
-        existingEntity = self.backend.getEntityById(entity['id'])
+        existingEntity = self.backend.get_entity_by_id(entity['id'])
 
         if existingEntity != None:            
-            result, error = self.backend.deleteEntityById(entity['id'])
+            result, error = self.backend.delete_entity_by_id(entity['id'])
         
         
         # TODO: 3 Return different status code for update/creation here?
 
-        return self.backend.createEntity_object(entity)
+        return self.backend.write_entity(entity)
 
     ######### END Upsert entity (inofficial!) ###############
 
     ################### END Inofficial API methods (not part of NGSI-LD specification!) ###################
 
 
+
+
+
+
+
+
+
+
+
+    
+    
+    ######################### BEGIN Upsert entity #############################    
+    def upsert_entity(self, entity, temporal):        
+     
+        # TODO: Find all places where this method is called and whether checks are in place there
+
+        # NOTE: Validations should happen before the back-end is called!
+        
+        error = validate_entity(entity, temporal)
+
+        if error != None:
+            return None, error
+        
+      
+        # TODO: 4 Implement real upsert instead of delete+create
+        self.backend.delete_entity_by_id(entity['id'])
+        
+        #response, statusCode, error = self.createEntity_object(entity)
+        result, error = self.backend.write_entity(entity)
+
+        if error != None:
+            return None, error
+
+        # TODO: Return proper status code: 201 for create, 204 for update
+        return NgsiLdResult(None, 204), None
+    ######################### END Upsert entity #############################
+
+    

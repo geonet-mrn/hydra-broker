@@ -67,7 +67,7 @@ class PsqlBackend:
     
     # ATTENTION: This method expects a Python object, *not* an NGSI-LD string!
          
-    def createEntity_object(self, entity):        
+    def write_entity(self, entity):        
     
         # TODO: Find all places where this method is called and whether checks are in place there
         '''
@@ -155,9 +155,9 @@ class PsqlBackend:
 
 
 
-    def deleteEntityById(self, id):
+    def delete_entity_by_id(self, id):
         ############# BEGIN Check if entity with the passed ID exists ###########
-        result, error = self.getEntityById(id)
+        result, error = self.get_entity_by_id(id)
 
         if error != None:
             # TODO: 3 Correct status code for this?
@@ -174,7 +174,7 @@ class PsqlBackend:
 
 
     #################### BEGIN 5.7.1 - Retrieve Entity ######################
-    def getEntityById(self, id, args = []):
+    def get_entity_by_id(self, id, args = []):
 
         # TODO: 2 Implement "attrs" parameter (see NGSI-LD spec 6.5.3.1-1)    
         
@@ -215,7 +215,7 @@ class PsqlBackend:
 
 
     #################### BEGIN 5.7.2 - Query Entities ####################
-    def queryEntities(self, args):        
+    def query_entities(self, args):        
 
         t1 = self.config['db_table_data']
         t2 = self.config['db_table_geom']
@@ -460,57 +460,4 @@ class PsqlBackend:
 
         return NgsiLdResult(result, 200), None
     #################### END 5.7.2 - Query Entities ####################
-
-
-
-
-    ######################### BEGIN Upsert entity #############################    
-    def upsertEntity_object(self, entity):        
-     
-        # TODO: Find all places where this method is called and whether checks are in place there
-
-        # NOTE: Validations should happen before the back-end is called!
-        '''
-        error = validateEntity_object(entity)
-
-        if error != None:
-            return None, error
-        '''
-      
-        # TODO: 4 Implement real upsert instead of delete+create
-        self.deleteEntityById(entity['id'])
-        
-        #response, statusCode, error = self.createEntity_object(entity)
-        result, error = self.createEntity_object(entity)
-
-        if error != None:
-            return None, error
-
-        # TODO: Return proper status code: 201 for create, 204 for update
-        return NgsiLdResult(None, 204), None
-    ######################### END Upsert entity #############################
-
-
-    ######################### BEGIN Upsert entity #############################    
-    def upsert_entity_temporal(self, entity_temporal):        
-     
-        '''
-        error = validate_entity_temporal(entity_temporal)
-
-        if error != None:
-            return None, error
-        '''
-      
-        # TODO: 4 Implement real upsert instead of delete+create
-        self.deleteEntityById(entity['id'])
-        
-        #response, statusCode, error = self.createEntity_object(entity)
-        result, error = self.create_entity_temporal(entity_temporal)
-
-        if error != None:
-            return None, error
-
-        # TODO: Return proper status code: 201 for create, 204 for update
-        return NgsiLdResult(None, 204), None
-    ######################### END Upsert entity #############################
 

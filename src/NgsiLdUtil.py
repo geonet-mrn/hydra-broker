@@ -129,7 +129,7 @@ def validateDatetimeString(datetime):
     
 
 ############# BEGIN Validate entity according to NGSL-LD spec section 4.5.1 ############### 
-def validateEntity_object(entity):
+def validate_entity(entity, temporal):
 
     # TODO: 2 Check whether the error type here should really be "BadRequestData" or "InvalidRequest"
 
@@ -160,10 +160,22 @@ def validateEntity_object(entity):
         if key == 'id' or key == 'type' or key == '@context':
             continue
 
-        error = validate_entity_member(entity[key])
 
-        if error != None:
-            return error
+        if temporal:
+            if not isinstance(entity[key], list):
+                return NgsiLdError("BadRequestData", "Member is not an array: " + key)
+
+
+            for instance in entity[key]:
+                error = validate_entity_member(instance)
+
+                if error != None:
+                    return error
+        else:
+            error = validate_entity_member(entity[key])
+
+            if error != None:
+                return error
 
 
     ################# END Validate properties ################
@@ -173,7 +185,7 @@ def validateEntity_object(entity):
 ############# END Validate entity according to NGSL-LD spec section 4.5.1 ############### 
 
 
-
+'''
 
 ############# BEGIN Validate entity according to NGSL-LD spec section 4.5.1 ############### 
 def validate_entity_temporal(entity):
@@ -225,7 +237,7 @@ def validate_entity_temporal(entity):
     return None
 
 ############# END Validate entity according to NGSL-LD spec section 4.5.1 ############### 
-
+'''
 
 
 
