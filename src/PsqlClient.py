@@ -10,6 +10,8 @@
 
 # TODO: 2 Implement property validation, e.g. 4.6.2
 
+# TODO: 2 What happens when an update to a temporal entity is done via the normal API?
+
 
 import json
 
@@ -262,9 +264,7 @@ class PsqlClient:
 
     ############################# BEGIN 5.6.6 - Delete Entity ###############################
     def api_deleteEntity(self, id):
-
         return self.backend.delete_entity_by_id(id)
-       
     ############################# END 5.6.6 - Delete Entity ###############################
 
   
@@ -490,9 +490,8 @@ class PsqlClient:
 
 
     ############### BEGIN 5.6.16 - Delete Temporal Representation of an Entity ################
-    def api_deleteTemporalEntityById(self, entityId):
-        # TODO: 2 Implement
-        return None, util.NgsiLdError("OperationNotSupported", "This operation is not implemented yet.")
+    def api_deleteTemporalEntityById(self, entity_id):
+        return self.backend.delete_entity_by_id(entity_id)
     ############### END 5.6.16 - Delete Temporal Representation of an Entity ################
 
 
@@ -587,12 +586,19 @@ class PsqlClient:
 
         # TODO: 2 check entityID -> if not present or valid, return BadRequestData error
 
-        # Try to retrieve requested entity by id:
-        #entity, responseCode, error = self.api_getEntityById(entityId)
+        # TODO: 2 Implement list of attributes to be retrieved
+        # TODO: 2 Implement temporal query
+        # TODO: 2 Implement lastN
+
+    
+
+        # Try to retrieve requested entity by id:        
         result, error = self.backend.get_entity_by_id(entityId)
 
         if error != None:
             return None, error
+
+
 
 
         return result, None
