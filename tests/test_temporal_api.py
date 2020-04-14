@@ -60,7 +60,7 @@ class TestTemporalApi(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
 
         entity = r.json()
-        #print(r.json())
+        print(r.json())
 
         # Check whether property "testprop" is an array, as it is expected for the temporal reprsentation:
         self.assertTrue(isinstance(entity['testprop'], list))
@@ -71,7 +71,9 @@ class TestTemporalApi(unittest.TestCase):
         ################# END Test whether temporal representation has property arrays ###############
 
 
-        # TODO: 2 What happens when an update to a temporal entity is done via the normal API?
+
+
+
 
 
         
@@ -93,7 +95,7 @@ class TestTemporalApi(unittest.TestCase):
         
         r = requests.post(temporalEntitiesUrl + "test/attrs/", json= updateEntity, auth=(username, password))
         print(r.text)
-        self.assertEqual(r.status_code, 201)
+        self.assertEqual(r.status_code, 204)
         ################# END Append property instance temporal API (6.20.3.1 / 5.6.12) ###############
 
         

@@ -463,7 +463,7 @@ class PsqlClient:
         ############## END Write changes to databse #############
         
 
-        return util.NgsiLdResult("",201), None
+        return util.NgsiLdResult(None,204), None
     ############## END 5.6.12 -  Add Attributes to Temporal Representation of an Entity #############
 
 
