@@ -230,14 +230,6 @@ def deleteTemporalEntityAttributeInstance(entityId, attrId, instanceId):
 @auth.login_required
 def entitiesDelete():
     return createResponse(backend.api_inofficial_deleteEntities())
-
-'''
-# PUT /entities/<entityId> - Upsert entity. Not part of the official NGSL-LD specification!
-@app.route(urlBasePath + "/entities/<entityId>", methods=['PUT'])
-@auth.login_required
-def entitiesIdPut(entityId):
-    return createResponse(backend.api_inofficial_upsertEntity(request.data))
-'''
 ########################## END Inofficial endpoints (not defined in NGSI-LD specification) #########################
 
 

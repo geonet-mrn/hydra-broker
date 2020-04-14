@@ -371,11 +371,11 @@ class PsqlClient:
     
     ########################## END 5.6.8 - Batch Entity Creation or Update (Upsert) #####################
     
+    
+    # NOTE: 5.6.9 - Batch entity update is implemented by 5.6.8 - Batch Entity Creation or Update. The logic is identical.
 
-    # TODO: 3 Implement 5.6.9 - Batch Entity Update
 
-
-    ############## BEGIN 5.6.10 - Batch Entity Delete #############
+    ############################# BEGIN 5.6.10 - Batch Entity Delete ###########################
     def api_entityOperationsDelete(self, json_ld):
 
         error = valid.validateJsonLd(json_ld)
@@ -396,7 +396,7 @@ class PsqlClient:
 
         return util.NgsiLdResult(None, 200), None
     
-    ############## END 5.6.10 - Batch Entity Delete #############
+    ############################### END 5.6.10 - Batch Entity Delete ##########################
 
     
 
@@ -406,45 +406,12 @@ class PsqlClient:
     def api_upsertTemporalEntities(self, json_ld):
 
         return None, util.NgsiLdError("OperationNotSupported", "This operation is not yet implemented")
-
-        '''
-
-        error = validateJsonLd(json_ld)
-
-        if error != None:
-            return None, error
-
-   
-        entity = json.loads(json_ld)
-
-        # TODO: 1 Check if this is an EntityTemporal (or Entity?)
-
-        result, error = self.backend.getEntityById(entity['id'])
-
-        if result == None:
-            return self.createEntity_object(entity)
-
-        existing_entity = result.payload
-
-        updatedEntity = addTemporalAttributeInstances(existing_entity, entity)
-
-        self.backend.upsertEntity_object(updatedEntity)
-        # 201 - Created
-        # 204 - Updated
-        return util.NgsiLdResult(None, 201), None
-        #existingEntity = self.getEntityById
-
-        # TODO: 2 Implement
-        '''
-
     ############## END 5.6.11 - Create or Update Temporal Representation of an Entity #############
 
 
     ############## BEGIN 5.6.12 -  Add Attributes to Temporal Representation of an Entity #############
     def api_addTemporalEntityAttributes(self, entity_id, json_ld):
-        # TODO: 2 Implement
-        #return None, util.NgsiLdError("OperationNotSupported", "This operation is not implemented yet.")
-
+       
         error = valid.validateJsonLd(json_ld)
 
         if error != None:
@@ -518,8 +485,6 @@ class PsqlClient:
         
 
         return util.NgsiLdResult("",201), None
-
-
     ############## END 5.6.12 -  Add Attributes to Temporal Representation of an Entity #############
 
 
@@ -636,13 +601,8 @@ class PsqlClient:
         ####################### END Remove unrequested attributes ######################
 
 
-
-
-
-
-
-
         return util.NgsiLdResult(result2, result.statusCode), None
+
 
 
     ############## BEGIN 5.7.3 - Retrieve temporal evolution of an Entity #############
