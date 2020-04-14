@@ -69,7 +69,9 @@ class PsqlBackend:
     
     # ATTENTION: This method expects a Python object, *not* an NGSI-LD string!
          
-    def write_entity(self, entity):        
+    def write_entity(self, entity):   
+
+        entity = util.entity_to_temporal(entity)     
     
         # TODO: Find all places where this method is called and whether checks are in place there
         
@@ -302,20 +304,7 @@ class PsqlBackend:
                 sql_where_parts.append(f"{t1}.json_data->'{timeProperty}'->0->>'value' > '{time}'")               
                 sql_where_parts.append(f"{t1}.json_data->'{timeProperty}'->0->>'value' < '{endtime}'")               
 
-            '''
-            if timeRel == 'before':
-               sql_where_parts.append(f"{t1}.json_data->'{timeProperty}'->>'value' < '{time}'")               
             
-            elif timeRel == 'after':
-                sql_where_parts.append(f"{t1}.json_data->'{timeProperty}'->>'value' > '{time}'")               
-                
-            elif timeRel == 'between':
-
-                endtime = args['endtime']
-
-                sql_where_parts.append(f"{t1}.json_data->'{timeProperty}'->>'value' > '{time}'")               
-                sql_where_parts.append(f"{t1}.json_data->'{timeProperty}'->>'value' < '{endtime}'")               
-            ''' 
         ################################# END Process temporal query, if there is one ##############################
 
         
