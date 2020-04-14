@@ -13,13 +13,8 @@
 
 import json
 
-
-import re
-
 from .PsqlBackend import PsqlBackend
-
 from .QueryParser import QueryParser
-
 from .util import validate as valid
 from .util import util as util
 
@@ -34,7 +29,6 @@ class PsqlClient:
 
         self.parser = QueryParser(self)
     ######################## END init method ######################
-
 
 
 
@@ -102,14 +96,11 @@ class PsqlClient:
 
 
         ################ BEGIN Write changes to database ############
-        #result, error = self.upsert_entity(existing_entity, temporal = False)
 
         # Delete old entity instance: 
         self.backend.delete_entity_by_id(existing_entity['id'])
         
-        
-
-        #response, statusCode, error = self.createEntity_object(entity)
+        # Write new entity instance:
         result, error = self.backend.write_entity(existing_entity)
 
         if error != None:
@@ -222,7 +213,6 @@ class PsqlClient:
                     
                     if len(pieces) > 2:
                         return None, util.NgsiLdError("InternalError", "Update aborted. The entity which is to be updated has an invalid structure: Invalid key name: " + existingKey)
-
                 
 
                 instancesFound = 0
@@ -248,7 +238,6 @@ class PsqlClient:
 
                     existingEntity[appendKey] = newValue 
         ################## END Iterate over entity fragment ################
-
 
 
         ################ BEGIN Write changes to database ############        
@@ -409,6 +398,7 @@ class PsqlClient:
     ############## END 5.6.11 - Create or Update Temporal Representation of an Entity #############
 
 
+
     ############## BEGIN 5.6.12 -  Add Attributes to Temporal Representation of an Entity #############
     def api_addTemporalEntityAttributes(self, entity_id, json_ld):
        
@@ -437,19 +427,7 @@ class PsqlClient:
         existing_entity = util.entity_to_single(result.payload)
         ############## END Try to fetch existing entity ###############
 
-        # NOTE: backend.getEntityById() should always return a temporal entity. This is not the case yet.
-        '''
-        ############# BEGIN Validate temporal entity fragment #############
-        error = validate_entity_temporal(existing_entity)
-
-        if error != None:
-            return None, error
-        ############# END Validate temporal entity fragment #############
-        '''
-            
-        # TODO: 2 Validate entity which comes from the database, too? It should be correct, but you never know...
-
-
+       
         for key, value in entity_temporal_fragment.items():
 
             # Skip required default properties (these are already checked above):
@@ -463,8 +441,7 @@ class PsqlClient:
 
             # Change single properties to array. Should eventually not be neccessary, since all entities should
             # be stored as temporal representations in the database.
-            
-            
+                        
             if not isinstance(existing_entity[key], list):
                 existing_entity[key] = [existing_entity[key]]
             
@@ -475,8 +452,10 @@ class PsqlClient:
 
 
         ############## BEGIN Write changes to databse #############
+        # Delete old entity:
         self.backend.delete_entity_by_id(existing_entity['id'])
                 
+        # Write new entity:
         result, error = self.backend.write_entity(existing_entity)
 
         if error != None:
@@ -532,6 +511,8 @@ class PsqlClient:
     #################### END 5.7.1 - Retrieve Entity ######################
 
 
+
+    ######################## BEGIN 5.7.2 - Query Entities ######################
     def api_queryEntities(self, args):
         
         arg_propQuery = args.get("q")
@@ -548,11 +529,6 @@ class PsqlClient:
 
         for entity in result.payload:
             result2.append(util.entity_to_single(entity))
-
-
-
-
-
 
         
         ##################### BEGIN Process properties query #####################
@@ -602,13 +578,12 @@ class PsqlClient:
 
 
         return util.NgsiLdResult(result2, result.statusCode), None
+    ######################## END 5.7.2 - Query Entities ######################
 
 
 
     ############## BEGIN 5.7.3 - Retrieve temporal evolution of an Entity #############
     def api_getTemporalEntityById(self, entityId, args):
-
-        # 5.7.3.4:
 
         # TODO: 2 check entityID -> if not present or valid, return BadRequestData error
 
@@ -623,23 +598,9 @@ class PsqlClient:
         return result, None
 
         # TODO: 2 Complete
-
-        
-        # NOTE: Don't convert to single here
-        existingEntity = result.payload
-        '''
-        isTemporalQuery = valid.validateTemporalQuery(args)
-
-        if isTemporalQuery:
-            pass
-        
-        #return util.NgsiLdResult(createEntityTemporal(existingEntity, args), 200), None
-        return existingEntity, None
-
-
-        pass
-        '''
+       
     ############## END 5.7.3 - Retrieve temporal evolution of an Entity #############
+
 
 
     ############## BEGIN 5.7.4 - Query temporal evolution of entities #############
@@ -653,15 +614,8 @@ class PsqlClient:
         if not isTemporalQuery or error != None:
             return None, error
 
+        return None, util.NgsiLdError("OperationNotSupported", "This operation is not implemented yet.")
         
-
-        # 201 - Created
-        # 204 - Updated
-        return util.NgsiLdResult(None, 201), None
-        #existingEntity = self.getEntityById
-
-        # TODO: 2 Implement
-
     ############## END 5.7.4 - Query temporal evolution of entities #############
 
 
