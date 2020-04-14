@@ -153,6 +153,7 @@ class TestEntityOperations(unittest.TestCase):
         r = requests.get(entitiesUrl + "test1", auth=(username, password))
 
         entity = r.json()
+        print(entity)
 
         self.assertEqual(entity['name']['value'], 'Mary')
 

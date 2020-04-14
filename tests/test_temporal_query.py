@@ -58,13 +58,16 @@ class TemporalQueryTest(unittest.TestCase):
 
         # Nothing should be found:
         r = requests.get(entitiesUrl + "?timerel=before&time=" + urllib.parse.quote("2010-08-31T00:00:00Z"), auth=(username, password))
-        print(r.text)
+        
         self.assertEqual(r.status_code, 200)
         self.assertEqual(len(r.json()), 0)
         
         # The created test entity should be found since it fits the passed time frame:
         r = requests.get(entitiesUrl + "?timerel=after&time=" + urllib.parse.quote("2010-08-31T00:00:00Z"), auth=(username, password))
-        self.assertEqual(r.status_code, 200)
+        
+        print(r.json())
+
+        self.assertEqual(r.status_code, 200)        
         self.assertEqual(len(r.json()), 1)
 
         # The created test entity should be found since it fits the passed time frame:

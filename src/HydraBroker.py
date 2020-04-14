@@ -17,7 +17,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 from .PsqlClient import PsqlClient
 
-from .NgsiLdUtil import *
+
+
+from .util import validate as valid
+from .util import util as util
 
 if sys.version_info[0] < 3:
     raise Exception("Hydra must be run with Python 3!")
@@ -228,13 +231,13 @@ def deleteTemporalEntityAttributeInstance(entityId, attrId, instanceId):
 def entitiesDelete():
     return createResponse(backend.api_inofficial_deleteEntities())
 
-
+'''
 # PUT /entities/<entityId> - Upsert entity. Not part of the official NGSL-LD specification!
 @app.route(urlBasePath + "/entities/<entityId>", methods=['PUT'])
 @auth.login_required
 def entitiesIdPut(entityId):
     return createResponse(backend.api_inofficial_upsertEntity(request.data))
-
+'''
 ########################## END Inofficial endpoints (not defined in NGSI-LD specification) #########################
 
 
@@ -251,7 +254,7 @@ def createResponse(apiResult):
     result, error = apiResult
 
     if result == None and error == None:
-        error = NgsiLdError("InternalError", "The broker back-end did not return a specific result or error.")
+        error = util.NgsiLdError("InternalError", "The broker back-end did not return a specific result or error.")
 
     # HTTP status codes according to NGSI-LD spec section 6.3.2
     # Detailed error messages according to NGSI-LD spec section 5.5.2

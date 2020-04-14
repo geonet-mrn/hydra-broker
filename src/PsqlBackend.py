@@ -10,8 +10,10 @@ import psycopg2
 #import psycopg2.extras # Required to use a cursur that returns rows as dictionaries with colum name keys
 import re
 
-from .NgsiLdUtil import *
 
+
+from .util import validate as valid
+from .util import util as util
 
 from .QueryParser import QueryParser
 
@@ -70,12 +72,13 @@ class PsqlBackend:
     def write_entity(self, entity):        
     
         # TODO: Find all places where this method is called and whether checks are in place there
-        '''
-        error = validateEntity_object(entity)
+        
+        # NOTE: Entities which are written to the database must always have the temporal form:
+        error = valid.validate_entity(entity, temporal = True)
 
         if error != None:
             return None, error
-        '''
+        
 
         # TODO: 3 Add system-generated property 'createdAt' (see NGSI-LD spec 4.5.2)
         # TODO: 3 Add system-generated property 'modifiedAt' (see NGSI-LD spec 4.5.2)
@@ -95,11 +98,11 @@ class PsqlBackend:
             self.query(insertQuery.getString(), insertQuery.values)
         except psycopg2.IntegrityError:
 
-            return None, NgsiLdError("AlreadyExists", f"An entity with id {entity['id']} already exists.")
+            return None, util.NgsiLdError("AlreadyExists", f"An entity with id {entity['id']} already exists.")
             
         
         except Exception as e:
-            return None, NgsiLdError("InternalError","An unspecified database error occured while trying to create the entity.")
+            return None, util.NgsiLdError("InternalError","An unspecified database error occured while trying to create the entity.")
             
             
         finally:
@@ -114,8 +117,18 @@ class PsqlBackend:
         ################### BEGIN Write new geo properties ###############
         for key in entity:
             
-            prop = entity[key]
+            
+            if not isinstance(entity[key], list):
+                continue
 
+            if len(entity[key]) == 0:
+                continue
+
+            # Always use data from first instance:
+            # TODO: 1 this is not correct
+            prop = entity[key][0]
+
+                    
             ############ BEGIN Check if property is a GeoProperty ###########
             if not type(prop) is dict:
                 continue
@@ -142,7 +155,7 @@ class PsqlBackend:
 
         ################## END Process GeoProperties ################
         
-        return NgsiLdResult(None, 201), None
+        return util.NgsiLdResult(None, 201), None
     ######################### END Create Entity by object #############################        
 
 
@@ -151,7 +164,7 @@ class PsqlBackend:
         self.query("DELETE FROM %s"  % (self.config['db_table_data']))
         self.query("DELETE FROM %s"  % (self.config['db_table_geom']))
         
-        return NgsiLdResult(None, 204), None
+        return util.NgsiLdResult(None, 204), None
 
 
 
@@ -170,7 +183,7 @@ class PsqlBackend:
         # Delete main table row:        
         self.query("DELETE FROM %s WHERE id = '%s'" % (self.config['db_table_data'], id))
 
-        return NgsiLdResult(None, 204), None
+        return util.NgsiLdResult(None, 204), None
 
 
     #################### BEGIN 5.7.1 - Retrieve Entity ######################
@@ -181,12 +194,12 @@ class PsqlBackend:
         rows = self.query("SELECT json_data FROM %s WHERE id = '%s'" % (self.config['db_table_data'], id))
 
         if len(rows) == 0:
-            return None, NgsiLdError("ResourceNotFound", "No entity with id '" + id + "' found.")
+            return None, util.NgsiLdError("ResourceNotFound", "No entity with id '" + id + "' found.")
         
         elif len(rows) > 1:
-            return None, NgsiLdError("InternalError", "Multiple entities with id '" + id + "' found. This is a database inconsistency and should never happen.")
+            return None, util.NgsiLdError("InternalError", "Multiple entities with id '" + id + "' found. This is a database inconsistency and should never happen.")
                
-        return NgsiLdResult(rows[0][0], 200), None
+        return util.NgsiLdResult(rows[0][0], 200), None
        
     #################### END 5.7.1 - Retrieve Entity ######################
 
@@ -220,9 +233,11 @@ class PsqlBackend:
         t1 = self.config['db_table_data']
         t2 = self.config['db_table_geom']
 
+
         arg_propQuery = args.get("q")
         arg_type = args.get('type')
         arg_attrs = args.get('attrs')
+      
 
         sql_query = None
         sql_where_parts = []
@@ -252,7 +267,7 @@ class PsqlBackend:
    
 
         ################################## BEGIN Process temporal query, if there is one ############################
-        isTemporalQuery, error = validateTemporalQuery(args)
+        isTemporalQuery, error = valid.validateTemporalQuery(args)
 
         if isTemporalQuery:
 
@@ -274,7 +289,20 @@ class PsqlBackend:
             # NOTE: Time comparison as strings works without conversion to a date object, as long as the time zone is the same. 
             # This should always be the case, since NGSI-LD expects all times to be expressed in UTC (see NGSI-LD spec 4.6.3)
         
+            if timeRel == 'before':
+               sql_where_parts.append(f"{t1}.json_data->'{timeProperty}'->0->>'value' < '{time}'")               
+            
+            elif timeRel == 'after':
+                sql_where_parts.append(f"{t1}.json_data->'{timeProperty}'->0->>'value' > '{time}'")               
+                
+            elif timeRel == 'between':
 
+                endtime = args['endtime']
+
+                sql_where_parts.append(f"{t1}.json_data->'{timeProperty}'->0->>'value' > '{time}'")               
+                sql_where_parts.append(f"{t1}.json_data->'{timeProperty}'->0->>'value' < '{endtime}'")               
+
+            '''
             if timeRel == 'before':
                sql_where_parts.append(f"{t1}.json_data->'{timeProperty}'->>'value' < '{time}'")               
             
@@ -287,13 +315,13 @@ class PsqlBackend:
 
                 sql_where_parts.append(f"{t1}.json_data->'{timeProperty}'->>'value' > '{time}'")               
                 sql_where_parts.append(f"{t1}.json_data->'{timeProperty}'->>'value' < '{endtime}'")               
-                
+            ''' 
         ################################# END Process temporal query, if there is one ##############################
 
         
         ################################ BEGIN Process geo query arguments #############################
 
-        isGeoQuery, error_geo = validateGeoQuery(args)
+        isGeoQuery, error_geo = valid.validateGeoQuery(args)
 
         if isGeoQuery:
           
@@ -412,6 +440,10 @@ class PsqlBackend:
             result.append(row[0])            
         ############## END Prepare results list #############
 
+        '''
+        arg_propQuery = args.get("q")
+        arg_type = args.get('type')
+        arg_attrs = args.get('attrs')
 
         ##################### BEGIN Process properties query #####################
         if arg_propQuery != None:
@@ -457,7 +489,8 @@ class PsqlBackend:
 
             result = result_filtered
         ####################### END Remove unrequested attributes ######################
+        '''
 
-        return NgsiLdResult(result, 200), None
+        return util.NgsiLdResult(result, 200), None
     #################### END 5.7.2 - Query Entities ####################
 

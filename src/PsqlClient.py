@@ -17,10 +17,11 @@ import json
 import re
 
 from .PsqlBackend import PsqlBackend
-from .NgsiLdUtil import *
 
+from .QueryParser import QueryParser
 
-#from .QueryParser import QueryParser
+from .util import validate as valid
+from .util import util as util
 
 
 class PsqlClient:
@@ -30,6 +31,8 @@ class PsqlClient:
 
         self.config = config
         self.backend = PsqlBackend(config)
+
+        self.parser = QueryParser(self)
     ######################## END init method ######################
 
 
@@ -37,12 +40,14 @@ class PsqlClient:
 
     ############################# BEGIN 5.6.1 - Create Entity ################################          
     def api_createEntity(self, json_ld):
-        error = validateJsonLd(json_ld)
+        error = valid.validateJsonLd(json_ld)
 
         if error != None:
             return None, error
 
         entity = json.loads(json_ld)
+
+        entity = util.entity_to_temporal(entity)
      
         return self.backend.write_entity(entity)
     ############################# END 5.6.1 - Create Entity ################################        
@@ -57,14 +62,14 @@ class PsqlClient:
         result, error = self.backend.get_entity_by_id(entity_id)
         
         if result == None:
-            return None, NgsiLdError("ResourceNotFound", "An entity with the passed ID does not exist: " + entity_id)
+            return None, util.NgsiLdError("ResourceNotFound", "An entity with the passed ID does not exist: " + entity_id)
 
-        existing_entity = result.payload
+        existing_entity = util.entity_to_single(result.payload)
         ############### BEGIN Try to fetch entity from database ###############
 
 
         ############# BEGIN Validate payload JSON ############
-        error = validateJsonLd(entity_fragment_json_ld)
+        error = valid.validateJsonLd(entity_fragment_json_ld)
 
         if error != None:
             return None, error
@@ -106,9 +111,9 @@ class PsqlClient:
 
         if len(unchanged_details) > 0:
             # See 5.2.18 for structure of UpdateResult type     
-            return NgsiLdResult( { "updated" : updated, "unchanged" : unchanged_details}, 207), None
+            return util.NgsiLdResult( { "updated" : updated, "unchanged" : unchanged_details}, 207), None
         else:
-            return NgsiLdResult(None, 204), None
+            return util.NgsiLdResult(None, 204), None
 
     ############################# END 5.6.2 - Update Entity Attributes ################################        
     
@@ -123,14 +128,14 @@ class PsqlClient:
         result, error = self.backend.get_entity_by_id(entity_id)
         
         if result == None:
-            return None, NgsiLdError("ResourceNotFound", "An entity with the passed ID does not exist: " + entity_id)
+            return None, util.NgsiLdError("ResourceNotFound", "An entity with the passed ID does not exist: " + entity_id)
 
-        existingEntity = result.payload
+        existingEntity = util.entity_to_single(result.payload)
         ############### BEGIN Try to fetch entity from database ###############
       
         
         ############# BEGIN Validate payload JSON ############
-        error = validateJsonLd(entity_fragment_jsonld)
+        error = valid.validateJsonLd(entity_fragment_jsonld)
 
         if error != None:
             return None, error
@@ -141,11 +146,11 @@ class PsqlClient:
 
         if not isinstance(entityFragment, dict):
             # TODO: 4 Correct error type?
-            return None, NgsiLdError("BadRequestData", "Entity fragments are JSON-LD dictionaries. The passed payload is not a JSON-LD dictionary.")
+            return None, util.NgsiLdError("BadRequestData", "Entity fragments are JSON-LD dictionaries. The passed payload is not a JSON-LD dictionary.")
 
         if len(entityFragment) == 0:
             # TODO: 4 Correct error type?
-            return None, NgsiLdError("BadRequestData", "Entity fragments contains no properties.")
+            return None, util.NgsiLdError("BadRequestData", "Entity fragments contains no properties.")
 
 
         # TODO: 2 Consider term expansion rules as mandated by clause 5.5.7
@@ -205,10 +210,10 @@ class PsqlClient:
                             if number > highestIndex:
                                 highestIndex = number
                         except(e):                        
-                            return None, NgsiLdError("InternalError", "Update aborted. The entity which is to be updated has an invalid structure: Index not numeric: " + existingKey)
+                            return None, util.NgsiLdError("InternalError", "Update aborted. The entity which is to be updated has an invalid structure: Index not numeric: " + existingKey)
                     
                     if len(pieces) > 2:
-                        return None, NgsiLdError("InternalError", "Update aborted. The entity which is to be updated has an invalid structure: Invalid key name: " + existingKey)
+                        return None, util.NgsiLdError("InternalError", "Update aborted. The entity which is to be updated has an invalid structure: Invalid key name: " + existingKey)
 
                 
 
@@ -227,7 +232,7 @@ class PsqlClient:
 
                 # Sanity check:
                 if instancesFound > 1:
-                    return None, NgsiLdError("InternalError", "Update aborted. The entity which is to be updated has an invalid structure: More than one property instance have the same datasetId: " + key)
+                    return None, util.NgsiLdError("InternalError", "Update aborted. The entity which is to be updated has an invalid structure: More than one property instance have the same datasetId: " + key)
 
 
                 if instancesFound == 0:
@@ -246,7 +251,7 @@ class PsqlClient:
             return None, error
 
 
-        return NgsiLdResult(None,204), None
+        return util.NgsiLdResult(None,204), None
 
     ################## END 5.6.3 - Append Entity Attributes ###################
 
@@ -265,11 +270,11 @@ class PsqlClient:
 
     # TODO: 2 Implement
     def api_patchEntityAttributeById(self, entityId, attrId):
-        return None, NgsiLdError("OperationNotSupported", "This operation is not implemented yet.")
+        return None, util.NgsiLdError("OperationNotSupported", "This operation is not implemented yet.")
 
     # TODO: 2 Implement
     def api_deleteEntityAttributeById(self, entityId, attrId, deleteAll, datasetId):
-        return None, NgsiLdError("OperationNotSupported", "This operation is not implemented yet.")
+        return None, util.NgsiLdError("OperationNotSupported", "This operation is not implemented yet.")
 
 
 
@@ -280,11 +285,11 @@ class PsqlClient:
         # Validate options argument:
         if not (options == 'update' or options == 'replace'):
             # TODO: 4 Correct error type?
-            return None, NgsiLdError("InvalidRequest", "'options' must be one of: 'replace', 'update' (default: 'replace').")
+            return None, util.NgsiLdError("InvalidRequest", "'options' must be one of: 'replace', 'update' (default: 'replace').")
 
 
         # Validate JSON-LD:
-        error = validateJsonLd(json_ld)
+        error = valid.validateJsonLd(json_ld)
 
         if error != None:
             return None, error
@@ -293,15 +298,15 @@ class PsqlClient:
 
         # Check if payload is a list:
         if not isinstance(entities, list):
-            return None, NgsiLdError("BadRequestData", "Request payload must be a JSON-LD array containing NGSI-LD entities.")
+            return None, util.NgsiLdError("BadRequestData", "Request payload must be a JSON-LD array containing NGSI-LD entities.")
 
         # Check if payload is is not empty:
         if len(entities) == 0:
-            return None, NgsiLdError("BadRequestData", "The list of entities must not be empty.")
+            return None, util.NgsiLdError("BadRequestData", "The list of entities must not be empty.")
 
         ########### BEGIN Validate entities in request payload list ###########
         for entity in entities:            
-            error = validate_entity(entity, temporal = False)
+            error = valid.validate_entity(entity, temporal = False)
             if error != None:
                 return None, error
         ########### END Validate entities in request payload list ###########
@@ -319,7 +324,7 @@ class PsqlClient:
 
             if result != None:
 
-                existingEntity = result.payload
+                existingEntity = util.entity_to_single(result.payload)
 
                 if options == "replace":
                 
@@ -331,6 +336,7 @@ class PsqlClient:
                     self.backend.delete_entity_by_id(id)
                     
                     # Write new entity:
+                    newEntity = util.entity_to_temporal(newEntity)
                     self.backend.write_entity(newEntity)
                 
                 elif options == "update":
@@ -340,6 +346,9 @@ class PsqlClient:
 
             else:
                 # Write new entity:
+
+                newEntity = util.entity_to_temporal(newEntity)
+
                 self.backend.write_entity(newEntity)
                                 
             success.append(id)
@@ -350,7 +359,7 @@ class PsqlClient:
         # See section 5.2.16 for the structure of BatchOperationResult
         batchOperationResult = { "succcess" : success, "errors" : errors}
 
-        return NgsiLdResult(batchOperationResult, 200), None
+        return util.NgsiLdResult(batchOperationResult, 200), None
     
     ########################## END 5.6.8 - Batch Entity Creation or Update (Upsert) #####################
     
@@ -361,7 +370,7 @@ class PsqlClient:
     ############## BEGIN 5.6.10 - Batch Entity Delete #############
     def api_entityOperationsDelete(self, json_ld):
 
-        error = validateJsonLd(json_ld)
+        error = valid.validateJsonLd(json_ld)
 
         if error != None:
             return None, error
@@ -370,14 +379,14 @@ class PsqlClient:
 
         # Check whether passed JSON is a list:
         if not isinstance(listOfIds, list):
-            return None, NgsiLdError("InvalidRequest", "Payload JSON is not a list.") 
+            return None, util.NgsiLdError("InvalidRequest", "Payload JSON is not a list.") 
 
         ############ BEGIN Check all passed entities for errors before starting to write any of them #########
         for id in listOfIds:
             self.backend.delete_entity_by_id(id)
         ############ END Check all passed entities for errors before starting to write any of them #########
 
-        return NgsiLdResult(None, 200), None
+        return util.NgsiLdResult(None, 200), None
     
     ############## END 5.6.10 - Batch Entity Delete #############
 
@@ -388,7 +397,7 @@ class PsqlClient:
 
     def api_upsertTemporalEntities(self, json_ld):
 
-        return None, NgsiLdError("OperationNotSupported", "This operation is not yet implemented")
+        return None, util.NgsiLdError("OperationNotSupported", "This operation is not yet implemented")
 
         '''
 
@@ -414,7 +423,7 @@ class PsqlClient:
         self.backend.upsertEntity_object(updatedEntity)
         # 201 - Created
         # 204 - Updated
-        return NgsiLdResult(None, 201), None
+        return util.NgsiLdResult(None, 201), None
         #existingEntity = self.getEntityById
 
         # TODO: 2 Implement
@@ -426,9 +435,9 @@ class PsqlClient:
     ############## BEGIN 5.6.12 -  Add Attributes to Temporal Representation of an Entity #############
     def api_addTemporalEntityAttributes(self, entity_id, json_ld):
         # TODO: 2 Implement
-        #return None, NgsiLdError("OperationNotSupported", "This operation is not implemented yet.")
+        #return None, util.NgsiLdError("OperationNotSupported", "This operation is not implemented yet.")
 
-        error = validateJsonLd(json_ld)
+        error = valid.validateJsonLd(json_ld)
 
         if error != None:
             return None, error
@@ -437,7 +446,7 @@ class PsqlClient:
         entity_temporal_fragment = json.loads(json_ld)
 
         ############# BEGIN Validate temporal entity fragment #############
-        error = validate_entity(entity_temporal_fragment, temporal = True)
+        error = valid.validate_entity(entity_temporal_fragment, temporal = True)
 
         if error != None:
             return None, error
@@ -448,9 +457,9 @@ class PsqlClient:
         result, error = self.backend.get_entity_by_id(entity_id)
 
         if result == None:            
-            return None, NgsiLdError("ResourceNotFound", "An entity with the passed ID does not exist: " + entity_id)
+            return None, util.NgsiLdError("ResourceNotFound", "An entity with the passed ID does not exist: " + entity_id)
         
-        existing_entity = result.payload
+        existing_entity = util.entity_to_single(result.payload)
         ############## END Try to fetch existing entity ###############
 
         # NOTE: backend.getEntityById() should always return a temporal entity. This is not the case yet.
@@ -485,7 +494,7 @@ class PsqlClient:
                 existing_entity[key] = [existing_entity[key]]
             
             if not isinstance(value, list):
-                return None, NgsiLdError("BadRequestData", "Property is not in temporal form: " + key)
+                return None, util.NgsiLdError("BadRequestData", "Property is not in temporal form: " + key)
 
             existing_entity[key].extend(value)
 
@@ -497,7 +506,7 @@ class PsqlClient:
 
         
 
-        return NgsiLdResult("",201), None
+        return util.NgsiLdResult("",201), None
 
 
     ############## END 5.6.12 -  Add Attributes to Temporal Representation of an Entity #############
@@ -506,7 +515,7 @@ class PsqlClient:
     ############## BEGIN 5.6.13 - Delete Attribute from Temporal Representation of an Entity #############
     def api_deleteTemporalEntityAttributeById(self, entityId, attrId):
         # TODO: 2 Implement
-        return None, NgsiLdError("OperationNotSupported", "This operation is not implemented yet.")
+        return None, util.NgsiLdError("OperationNotSupported", "This operation is not implemented yet.")
 
     ############## END 5.6.13 - Delete Attribute from Temporal Representation of an Entity #############
 
@@ -514,33 +523,115 @@ class PsqlClient:
     ############## BEGIN 5.6.14 - Modify attribute instance from Temporal Representation of an Entity #############
     def api_modifyTemporalEntityAttributeInstance(self, entityId, attrId, instanceId):
         # TODO: 2 Implement
-        return None, NgsiLdError("OperationNotSupported", "This operation is not implemented yet.")
+        return None, util.NgsiLdError("OperationNotSupported", "This operation is not implemented yet.")
     ############## END 5.6.14 - Modify attribute instance from Temporal Representation of an Entity #############
 
 
     ############## BEGIN 5.6.15 - Delete attribute instance from Temporal Representation of an Entity #############
     def api_deleteTemporalEntityAttributeInstance(self, entityId, attrId, instanceId):
         # TODO: 2 Implement
-        return None, NgsiLdError("OperationNotSupported", "This operation is not implemented yet.")
+        return None, util.NgsiLdError("OperationNotSupported", "This operation is not implemented yet.")
     ############## END 5.6.15 - Delete attribute instance from Temporal Representation of an Entity #############
 
 
     ############### BEGIN 5.6.16 - Delete Temporal Representation of an Entity ################
     def api_deleteTemporalEntityById(self, entityId):
         # TODO: 2 Implement
-        return None, NgsiLdError("OperationNotSupported", "This operation is not implemented yet.")
+        return None, util.NgsiLdError("OperationNotSupported", "This operation is not implemented yet.")
     ############### END 5.6.16 - Delete Temporal Representation of an Entity ################
 
 
 
     #################### BEGIN 5.7.1 - Retrieve Entity ######################
     def api_getEntityById(self, id, args = []):
-        return self.backend.get_entity_by_id(id, args)
+        
+        result, error = self.backend.get_entity_by_id(id, args)
+
+        if error != None:
+            return None, error
+
+        entity = util.entity_to_single(result.payload)
+
+        return util.NgsiLdResult(entity, result.statusCode), None
     #################### END 5.7.1 - Retrieve Entity ######################
 
 
     def api_queryEntities(self, args):
-        return self.backend.query_entities(args)
+        
+        arg_propQuery = args.get("q")
+        arg_type = args.get('type')
+        arg_attrs = args.get('attrs')
+
+
+        result, error =  self.backend.query_entities(args)
+
+        if error != None:
+            return None, error
+
+        result2 = []
+
+        for entity in result.payload:
+            result2.append(util.entity_to_single(entity))
+
+
+
+
+
+
+        
+        ##################### BEGIN Process properties query #####################
+        if arg_propQuery != None:
+
+            #print("Query: " + propQuery)
+
+            tokens = self.parser.tokenize(arg_propQuery)
+            pp, index = self.parser.parseParantheses(tokens, 0)
+            ast = self.parser.buildAST(pp)
+
+            result_filtered = []
+
+            ########### BEGIN Filter entitiy ############
+            for entity in result2:
+
+                passed = self.parser.evaluate(ast, entity)
+
+                if not passed:                     
+                    continue
+
+                result_filtered.append(entity)
+            ########### END Filter entitiy ############
+
+            result2 = result_filtered
+        ##################### END Process properties query #####################
+        
+
+        ####################### BEGIN Remove unrequested attributes ######################
+        if arg_attrs != None:
+
+            result_filtered = []
+
+            attrs_list = arg_attrs.split(',')
+
+            for entity in result2:
+                entity_cleaned = {}
+            
+                for key in entity:
+                    if key in attrs_list:
+                        entity_cleaned[key] = entity[key]
+
+                result_filtered.append(entity_cleaned)
+
+            result2 = result_filtered
+        ####################### END Remove unrequested attributes ######################
+
+
+
+
+
+
+
+
+        return util.NgsiLdResult(result2, result.statusCode), None
 
 
     ############## BEGIN 5.7.3 - Retrieve temporal evolution of an Entity #############
@@ -557,17 +648,26 @@ class PsqlClient:
         if error != None:
             return None, error
 
-        existingEntity = result.payload
 
-        isTemporalQuery = validateTemporalQuery(args)
+        return result, None
+
+        # TODO: 2 Complete
+
+        
+        # NOTE: Don't convert to single here
+        existingEntity = result.payload
+        '''
+        isTemporalQuery = valid.validateTemporalQuery(args)
 
         if isTemporalQuery:
             pass
         
-        return NgsiLdResult(createEntityTemporal(existingEntity, args), 200), None
+        #return util.NgsiLdResult(createEntityTemporal(existingEntity, args), 200), None
+        return existingEntity, None
 
 
         pass
+        '''
     ############## END 5.7.3 - Retrieve temporal evolution of an Entity #############
 
 
@@ -575,7 +675,7 @@ class PsqlClient:
 
     def api_getTemporalEntities(self, args):
 
-        isTemporalQuery, error = validateTemporalQuery(args)
+        isTemporalQuery, error = valid.validateTemporalQuery(args)
 
         # NGSI-LD spec section 5.7.4.4:
 
@@ -586,7 +686,7 @@ class PsqlClient:
 
         # 201 - Created
         # 204 - Updated
-        return NgsiLdResult(None, 201), None
+        return util.NgsiLdResult(None, 201), None
         #existingEntity = self.getEntityById
 
         # TODO: 2 Implement
@@ -612,11 +712,11 @@ class PsqlClient:
     ######### END Delete all entities (inoffocial, only for testing!) ##########
 
 
-
+    '''
     ######### BEGIN Upsert entity (inofficial!) ############    
     def api_inofficial_upsertEntity(self, json_ld):      
 
-        error = validateJsonLd(json_ld)
+        error = valid.validateJsonLd(json_ld)
 
         if error != None:
             return None, error
@@ -624,7 +724,7 @@ class PsqlClient:
      
         entity = json.loads(json_ld)
 
-        error = validate_entity(entity, temporal = False)
+        error = valid.validate_entity(entity, temporal = False)
 
         if error != None:
             return None, error
@@ -632,7 +732,9 @@ class PsqlClient:
       
         # TODO: 4 Implement real upsert instead of delete+create
         
-        existingEntity = self.backend.get_entity_by_id(entity['id'])
+        result, error = self.backend.get_entity_by_id(entity['id'])
+
+        existing_entity = util.entity_to_single(result.payload)
 
         if existingEntity != None:            
             result, error = self.backend.delete_entity_by_id(entity['id'])
@@ -640,10 +742,12 @@ class PsqlClient:
         
         # TODO: 3 Return different status code for update/creation here?
 
+        entity = util.entity_to_temporal(entity)
+
         return self.backend.write_entity(entity)
 
     ######### END Upsert entity (inofficial!) ###############
-
+    '''
     ################### END Inofficial API methods (not part of NGSI-LD specification!) ###################
 
 
@@ -657,7 +761,6 @@ class PsqlClient:
 
 
     
-    
     ######################### BEGIN Upsert entity #############################    
     def upsert_entity(self, entity, temporal):        
      
@@ -665,7 +768,7 @@ class PsqlClient:
 
         # NOTE: Validations should happen before the back-end is called!
         
-        error = validate_entity(entity, temporal)
+        error = valid.validate_entity(entity, temporal)
 
         if error != None:
             return None, error
@@ -674,6 +777,8 @@ class PsqlClient:
         # TODO: 4 Implement real upsert instead of delete+create
         self.backend.delete_entity_by_id(entity['id'])
         
+        entity = util.entity_to_temporal(entity)
+
         #response, statusCode, error = self.createEntity_object(entity)
         result, error = self.backend.write_entity(entity)
 
@@ -681,7 +786,6 @@ class PsqlClient:
             return None, error
 
         # TODO: Return proper status code: 201 for create, 204 for update
-        return NgsiLdResult(None, 204), None
+        return util.NgsiLdResult(None, 204), None
     ######################### END Upsert entity #############################
 
-    
