@@ -1,21 +1,10 @@
 # -*- coding: utf-8 -*-
 
-# TODO: Understand:
-
-# TODO: 1 Prevent infinite recursive following of circular relationships in queries
-# TODO: 2 Implement path parsing for "@value"
-
 import json
 import psycopg2
-#import psycopg2.extras # Required to use a cursur that returns rows as dictionaries with colum name keys
-import re
-
-
 
 from .util import validate as valid
 from .util import util as util
-
-from .QueryParser import QueryParser
 
 
 ############################# BEGIN Class InsertQuery ##############################
@@ -55,9 +44,7 @@ class PsqlBackend:
 
         # Create a cursor that returns rows as dictionaries with column name keys:
         #self.cursor = self.dbconn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-        self.cursor = self.dbconn.cursor()
-
-        self.parser = QueryParser(self)
+        self.cursor = self.dbconn.cursor()        
 
     ######################## END init method ######################
 
@@ -304,7 +291,6 @@ class PsqlBackend:
                 sql_where_parts.append(f"{t1}.json_data->'{timeProperty}'->0->>'value' > '{time}'")               
                 sql_where_parts.append(f"{t1}.json_data->'{timeProperty}'->0->>'value' < '{endtime}'")               
 
-            
         ################################# END Process temporal query, if there is one ##############################
 
         
@@ -381,11 +367,6 @@ class PsqlBackend:
                 
         ############################# END Process geo query ##############################
         
-        
-        #sql_query = "SELECT %s.json_data, %s.json_data->>'id' as blubb FROM %s" % (t1, t1, t1)
-        #sql_query = "SELECT %s.json_data FROM %s" % (t1, t1, t1)
-        #sql_query = f"SELECT {t1}.json_data FROM {t1}"
-
         fields = []
         tables = []
     
@@ -429,56 +410,6 @@ class PsqlBackend:
             result.append(row[0])            
         ############## END Prepare results list #############
 
-        '''
-        arg_propQuery = args.get("q")
-        arg_type = args.get('type')
-        arg_attrs = args.get('attrs')
-
-        ##################### BEGIN Process properties query #####################
-        if arg_propQuery != None:
-
-            #print("Query: " + propQuery)
-
-            tokens = self.parser.tokenize(arg_propQuery)
-            pp, index = self.parser.parseParantheses(tokens, 0)
-            ast = self.parser.buildAST(pp)
-
-            result_filtered = []
-
-            ########### BEGIN Filter entitiy ############
-            for entity in result:
-
-                passed = self.parser.evaluate(ast, entity)
-
-                if not passed:                     
-                    continue
-
-                result_filtered.append(entity)
-            ########### END Filter entitiy ############
-
-            result = result_filtered
-        ##################### END Process properties query #####################
-        
-
-        ####################### BEGIN Remove unrequested attributes ######################
-        if arg_attrs != None:
-
-            result_filtered = []
-
-            attrs_list = arg_attrs.split(',')
-
-            for entity in result:
-                entity_cleaned = {}
-            
-                for key in entity:
-                    if key in attrs_list:
-                        entity_cleaned[key] = entity[key]
-
-                result_filtered.append(entity_cleaned)
-
-            result = result_filtered
-        ####################### END Remove unrequested attributes ######################
-        '''
 
         return util.NgsiLdResult(result, 200), None
     #################### END 5.7.2 - Query Entities ####################
