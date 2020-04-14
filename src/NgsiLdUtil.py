@@ -26,9 +26,27 @@ class NgsiLdResult:
         self.statusCode = statusCode
 
 
+'''
+# 5.6.12.4
+def append_temporal_attributes(temporal_entity, temporal_entity_fragment):
+
+    error = validate_entity_temporal(temporal_entity_fragment)
+
+    if error != None:
+        return None, error
+
+
+    error = validateEntity_object(temporal_entity)
+    
+    if error != None:
+        return None, error
+'''
+
+
+
+'''
 def addTemporalAttributeInstances(entity_temporal, entity_temporal_fragment):
 
-    print(entity_temporal)
 
     result = {}
 
@@ -38,6 +56,7 @@ def addTemporalAttributeInstances(entity_temporal, entity_temporal_fragment):
 
     # TODO: 2 Add random instance id?
 
+    ################### BEGIN Iterate over properties of temporal entity fragment ###############
     for key, value in entity_temporal_fragment.items():
 
         if key == 'id' or key == 'type' or key == "@context":
@@ -58,12 +77,16 @@ def addTemporalAttributeInstances(entity_temporal, entity_temporal_fragment):
             if not isinstance(target, list):
                 target = [target]
 
-        target.extend(source)
-            
+            target.extend(source)
+        else:
+            # TODO what if key does not exist in original entity?
+            pass
+
         result[key] = target
+    ################### END Iterate over properties of temporal entity fragment ###############
 
     return result
-    
+''' 
 
 
 def createEntityTemporal(entity, temporalQuery):
@@ -148,6 +171,62 @@ def validateEntity_object(entity):
     return None
 
 ############# END Validate entity according to NGSL-LD spec section 4.5.1 ############### 
+
+
+
+
+############# BEGIN Validate entity according to NGSL-LD spec section 4.5.1 ############### 
+def validate_entity_temporal(entity):
+
+    # TODO: 2 Check whether the error type here should really be "BadRequestData" or "InvalidRequest"
+
+    # NOTE: Actually, we shouldn't return NGSI-LD errors here since this is not an API function
+
+    if not isinstance(entity, dict):
+        return NgsiLdError("BadRequestData", "NGSI-LD entities are represented as JSON-LD dictionaries. However, the passed object is not a JSON-LD dictionary: " + str(entity))
+
+
+    
+    if not 'id' in entity:
+        return NgsiLdError("BadRequestData", "Entity is missing 'id' property.")
+        
+    if not 'type' in entity:
+        return NgsiLdError("BadRequestData", "Entity is missing 'type' property.")
+
+    if not '@context' in entity:
+        return NgsiLdError("BadRequestData", "Entity is missing '@context' property")
+
+    if not isinstance(entity['@context'], list):
+        return NgsiLdError("BadRequestData", "Member '@context' is not an array")
+
+
+    ################# BEGIN Validate properties ################
+    for key, value in entity.items():
+
+        # Skip required default properties (these are already checked above):
+        if key == 'id' or key == 'type' or key == '@context':
+            continue
+
+
+        # Check temporal structure (array properties) (see e.g. 5.6.12.3):
+        if not isinstance(entity[key], list):
+            return NgsiLdError("BadRequestData", "Member is not an array: " + key)
+
+
+        for instance in entity[key]:
+            error = validate_entity_member(instance)
+
+            if error != None:
+                return error
+
+
+    ################# END Validate properties ################
+
+    return None
+
+############# END Validate entity according to NGSL-LD spec section 4.5.1 ############### 
+
+
 
 
 

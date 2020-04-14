@@ -388,6 +388,10 @@ class PsqlClient:
 
     def api_upsertTemporalEntities(self, json_ld):
 
+        return None, NgsiLdError("OperationNotSupported", "This operation is not yet implemented")
+
+        '''
+
         error = validateJsonLd(json_ld)
 
         if error != None:
@@ -398,28 +402,104 @@ class PsqlClient:
 
         # TODO: 1 Check if this is an EntityTemporal (or Entity?)
 
-        existing_entity, statusCode, error = self.backend.getEntityById(entity['id'])
+        result, error = self.backend.getEntityById(entity['id'])
 
-        if existing_entity == None:
+        if result == None:
             return self.createEntity_object(entity)
+
+        existing_entity = result.payload
 
         updatedEntity = addTemporalAttributeInstances(existing_entity, entity)
 
-        self.upsertEntity_object(updatedEntity)
+        self.backend.upsertEntity_object(updatedEntity)
         # 201 - Created
         # 204 - Updated
         return NgsiLdResult(None, 201), None
         #existingEntity = self.getEntityById
 
         # TODO: 2 Implement
+        '''
 
     ############## END 5.6.11 - Create or Update Temporal Representation of an Entity #############
 
 
     ############## BEGIN 5.6.12 -  Add Attributes to Temporal Representation of an Entity #############
-    def api_addTemporalEntityAttributes(self, entityId):
+    def api_addTemporalEntityAttributes(self, entity_id, json_ld):
         # TODO: 2 Implement
-        return None, NgsiLdError("OperationNotSupported", "This operation is not implemented yet.")
+        #return None, NgsiLdError("OperationNotSupported", "This operation is not implemented yet.")
+
+        error = validateJsonLd(json_ld)
+
+        if error != None:
+            return None, error
+
+   
+        entity_temporal_fragment = json.loads(json_ld)
+
+        ############# BEGIN Validate temporal entity fragment #############
+        error = validate_entity_temporal(entity_temporal_fragment)
+
+        if error != None:
+            return None, error
+        ############# END Validate temporal entity fragment #############
+
+
+        ############## BEGIN Try to fetch existing entity ###############
+        result, error = self.backend.getEntityById(entity_id)
+
+        if result == None:            
+            return None, NgsiLdError("ResourceNotFound", "An entity with the passed ID does not exist: " + entity_id)
+        
+        existing_entity = result.payload
+        ############## END Try to fetch existing entity ###############
+
+        # NOTE: backend.getEntityById() should always return a temporal entity. This is not the case yet.
+        '''
+        ############# BEGIN Validate temporal entity fragment #############
+        error = validate_entity_temporal(existing_entity)
+
+        if error != None:
+            return None, error
+        ############# END Validate temporal entity fragment #############
+        '''
+            
+        # TODO: 2 Validate entity which comes from the database, too? It should be correct, but you never know...
+
+
+        for key, value in entity_temporal_fragment.items():
+
+            # Skip required default properties (these are already checked above):
+            if key == 'id' or key == 'type' or key == '@context':
+                continue
+
+            
+            if not key in existing_entity:
+                existing_entity[key] = []
+
+
+            # Change single properties to array. Should eventually not be neccessary, since all entities should
+            # be stored as temporal representations in the database.
+            
+            
+            if not isinstance(existing_entity[key], list):
+                existing_entity[key] = [existing_entity[key]]
+            
+            if not isinstance(value, list):
+                return None, NgsiLdError("BadRequestData", "Property is not in temporal form: " + key)
+
+            existing_entity[key].extend(value)
+
+
+        result, error = self.backend.upsertEntity_object(existing_entity)
+
+        if error != None:
+            return None, error
+
+        
+
+        return NgsiLdResult("",201), None
+
+
     ############## END 5.6.12 -  Add Attributes to Temporal Representation of an Entity #############
 
 

@@ -191,7 +191,7 @@ def deleteTemporalEntityById(entityId):
 # 6.20.3.1 - POST temporal/entities/<entityId>/attrs/:
 @app.route(urlBasePath + "/temporal/entities/<entityId>/attrs/", methods=['POST'])
 def postTemporalEntityAttributes(entityId):
-    return createResponse(backend.api_addTemporalEntityAttributes(entityId))
+    return createResponse(backend.api_addTemporalEntityAttributes(entityId, request.data))
 
 
 # 6.21.3.1 - DELETE temporal/entities/<entityId>/attrs/<attrId>:

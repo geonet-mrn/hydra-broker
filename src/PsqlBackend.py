@@ -69,11 +69,13 @@ class PsqlBackend:
          
     def createEntity_object(self, entity):        
     
+        # TODO: Find all places where this method is called and whether checks are in place there
+        '''
         error = validateEntity_object(entity)
 
         if error != None:
             return None, error
-
+        '''
 
         # TODO: 3 Add system-generated property 'createdAt' (see NGSI-LD spec 4.5.2)
         # TODO: 3 Add system-generated property 'modifiedAt' (see NGSI-LD spec 4.5.2)
@@ -465,17 +467,45 @@ class PsqlBackend:
     ######################### BEGIN Upsert entity #############################    
     def upsertEntity_object(self, entity):        
      
+        # TODO: Find all places where this method is called and whether checks are in place there
+
+        # NOTE: Validations should happen before the back-end is called!
+        '''
         error = validateEntity_object(entity)
 
         if error != None:
             return None, error
-
+        '''
       
         # TODO: 4 Implement real upsert instead of delete+create
         self.deleteEntityById(entity['id'])
         
         #response, statusCode, error = self.createEntity_object(entity)
         result, error = self.createEntity_object(entity)
+
+        if error != None:
+            return None, error
+
+        # TODO: Return proper status code: 201 for create, 204 for update
+        return NgsiLdResult(None, 204), None
+    ######################### END Upsert entity #############################
+
+
+    ######################### BEGIN Upsert entity #############################    
+    def upsert_entity_temporal(self, entity_temporal):        
+     
+        '''
+        error = validate_entity_temporal(entity_temporal)
+
+        if error != None:
+            return None, error
+        '''
+      
+        # TODO: 4 Implement real upsert instead of delete+create
+        self.deleteEntityById(entity['id'])
+        
+        #response, statusCode, error = self.createEntity_object(entity)
+        result, error = self.create_entity_temporal(entity_temporal)
 
         if error != None:
             return None, error
