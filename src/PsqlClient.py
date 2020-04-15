@@ -20,6 +20,9 @@ from .QueryParser import QueryParser
 from .util import validate as valid
 from .util import util as util
 
+import datetime
+import uuid
+
 
 class PsqlClient:
 
@@ -451,6 +454,15 @@ class PsqlClient:
             if not key in existing_entity:
                 existing_entity[key] = []
 
+
+            # Set system-generated values for the added attribute instances:
+            for instance in value:                
+                currentTime = datetime.datetime.utcnow().isoformat() + "Z"
+                instance['createdAt'] = currentTime
+                instance['modifiedAt'] = currentTime
+
+                instance['instanceId'] = str(uuid.uuid4())
+
             # Append instances from fragment:
             existing_entity[key].extend(value)
 
@@ -468,7 +480,7 @@ class PsqlClient:
             return None, error
         ############## END Write changes to databse #############
         
-        
+
         return util.NgsiLdResult(None,204), None
     ############## END 5.6.12 -  Add Attributes to Temporal Representation of an Entity #############
 

@@ -2,6 +2,7 @@
 
 import json
 import psycopg2
+import datetime
 
 from .util import validate as valid
 from .util import util as util
@@ -58,21 +59,39 @@ class PsqlBackend:
          
     def write_entity(self, entity):   
 
+        # Convert entity to temporal form:
         entity = util.entity_to_temporal(entity)     
-    
-        # TODO: Find all places where this method is called and whether checks are in place there
-        
-        # NOTE: Entities which are written to the database must always have the temporal form:
+
+
+        ################# BEGIN Validate entity #####################
         error = valid.validate_entity(entity, temporal = True)
 
         if error != None:
             return None, error
+        ################# END Validate entity #####################
         
 
-        # TODO: 3 Add system-generated property 'createdAt' (see NGSI-LD spec 4.5.2)
-        # TODO: 3 Add system-generated property 'modifiedAt' (see NGSI-LD spec 4.5.2)
+        for key, value in entity.items():
 
-        # TODO: 3 Check datetime conformity as defined in NGSI-LD spec 4.6.3
+            if key == 'id' or key == 'type' or key == '@context':
+                continue
+
+            ############# BEGIN Add 'createdAt' and 'modifiedAt' if they are still missing (shouldn't be the case though!) ##########
+            for instance in value:
+                print(instance)
+                
+                if not 'createdAt' in instance:
+                    instance['createdAt'] =  datetime.datetime.utcnow().isoformat() + "Z"
+
+                if not 'modifiedAt' in instance:
+                    instance['modifiedAt'] =  datetime.datetime.utcnow().isoformat() + "Z"
+            ############# END Add 'createdAt' and 'modifiedAt' if they are still missing (shouldn't be the case though!) ##########
+
+            # TODO: 1 Modifying a dictionary inside a loop which iterates over that dictionary is ugly!
+
+            # Make sure that the attribute instance with the latest 'modifiedAt' value is the first entry of the list:
+            entity[key] = sorted(entity[key], key=lambda i: (i['modifiedAt'], i['createdAt']), reverse=True) 
+
 
 
         ################ BEGIN Write main table entry ##############

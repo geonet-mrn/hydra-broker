@@ -22,5 +22,4 @@ from .test_geoquery import *
 from .test_post import *
 
 
-
 from .test_temporal_api import *
