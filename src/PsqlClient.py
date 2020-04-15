@@ -401,22 +401,12 @@ class PsqlClient:
 
     ############## BEGIN 5.6.12 -  Add Attributes to Temporal Representation of an Entity #############
     def api_addTemporalEntityAttributes(self, entity_id, json_ld):
-       
-        error = valid.validateJsonLd(json_ld)
 
-        if error != None:
-            return None, error
+        # 5.6.12.4
 
-   
-        entity_temporal_fragment = json.loads(json_ld)
+        # -
 
-        ############# BEGIN Validate temporal entity fragment #############
-        error = valid.validate_entity(entity_temporal_fragment, temporal = True)
-
-        if error != None:
-            return None, error
-        ############# END Validate temporal entity fragment #############
-
+        # TODO: 2 Check entity_id
 
         ############## BEGIN Try to fetch existing entity ###############
         result, error = self.backend.get_entity_by_id(entity_id)
@@ -424,31 +414,47 @@ class PsqlClient:
         if result == None:            
             return None, util.NgsiLdError("ResourceNotFound", "An entity with the passed ID does not exist: " + entity_id)
         
-        existing_entity = util.entity_to_single(result.payload)
+        existing_entity = result.payload
         ############## END Try to fetch existing entity ###############
 
+        # -
+
+        ############# BEGIN Validate temporal entity fragment #############
+        error = valid.validateJsonLd(json_ld)
+
+        if error != None:
+            return None, error
+   
+        entity_temporal_fragment = json.loads(json_ld)
+        
+        error = valid.validate_entity(entity_temporal_fragment, temporal = True)
+
+        if error != None:
+            return None, error
+        ############# END Validate temporal entity fragment #############
+
+
+        # -
        
+        #################### BEGIN Iterate over the attributes of the passed EntityTemporal fragment ##################
         for key, value in entity_temporal_fragment.items():
 
-            # Skip required default properties (these are already checked above):
+            # Skip id, type and @context:
             if key == 'id' or key == 'type' or key == '@context':
                 continue
-
             
+            # Check if attribute is in temporal form. If not, abort with error:
+            if not isinstance(entity_temporal_fragment[key], list):
+                return None, util.NgsiLdError("BadRequestData", "Property is not in temporal form: " + key)
+
+            # If attribute does not exist in original entity, create it:
             if not key in existing_entity:
                 existing_entity[key] = []
 
-
-            # Change single properties to array. Should eventually not be neccessary, since all entities should
-            # be stored as temporal representations in the database.
-                        
-            if not isinstance(existing_entity[key], list):
-                existing_entity[key] = [existing_entity[key]]
-            
-            if not isinstance(value, list):
-                return None, util.NgsiLdError("BadRequestData", "Property is not in temporal form: " + key)
-
+            # Append instances from fragment:
             existing_entity[key].extend(value)
+
+        #################### END Iterate over the attributes of the passed EntityTemporal fragment ##################
 
 
         ############## BEGIN Write changes to databse #############
@@ -462,7 +468,7 @@ class PsqlClient:
             return None, error
         ############## END Write changes to databse #############
         
-
+        
         return util.NgsiLdResult(None,204), None
     ############## END 5.6.12 -  Add Attributes to Temporal Representation of an Entity #############
 
