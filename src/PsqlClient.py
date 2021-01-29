@@ -528,10 +528,36 @@ class PsqlClient:
     #################### END 5.7.1 - Retrieve Entity ######################
 
 
+    def post_geoquery(self, request):
+      
+        args = request.args.copy()
+      
+        ############ BEGIN Read geo query coordinates data from request payload #########
+        
+        # This is a workaround for the problem that the maximum length of the 
+        # GET request parameters string might be too short for geo query geometries.
+        blubb = None
+        
+        try:
+            blubb = json.loads(request.data)            
+        except:
+            pass
+   
+        if blubb != None:
+            print("PAYLOAD IS JSON!")
+            args["coordinates"] = request.data
+            
+        
+        return self.api_queryEntities(args)
+
+        
+        ##################### BEGIN Process properties query #####################
+        
+        
 
     ######################## BEGIN 5.7.2 - Query Entities ######################
     def api_queryEntities(self, args):
-        
+
         arg_propQuery = args.get("q")
         arg_type = args.get('type')
         arg_attrs = args.get('attrs')
@@ -546,9 +572,8 @@ class PsqlClient:
 
         for entity in result.payload:
             result2.append(util.entity_to_single(entity))
-
+            
         
-        ##################### BEGIN Process properties query #####################
         if arg_propQuery != None:
 
             #print("Query: " + propQuery)

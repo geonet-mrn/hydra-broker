@@ -55,6 +55,14 @@ urlBasePath = "/ngsi-ld/v1"
 # Otherwise, the server returns response code 308 on requests with basic authentication.
 # Also, the trailing '/' is expected according to the NGSI-LD specification.
 
+
+
+# 6.4.3.1 - POST /entities/
+@app.route(urlBasePath + "/entities/geoquery/", methods=['POST'])
+def postGeoQuery():
+    return createResponse(backend.post_geoquery(request))
+
+
 # 6.4.3.1 - POST /entities/
 @app.route(urlBasePath + "/entities/", methods=['POST'])
 @auth.login_required
@@ -64,7 +72,7 @@ def postEntities():
 
 # 6.4.3.2 - GET /entities/:
 @app.route(urlBasePath + "/entities/", methods=['GET'])
-def getEntities():
+def getEntities():   
     return createResponse(backend.api_queryEntities(request.args))
 
 
@@ -316,7 +324,7 @@ if __name__ == '__main__':
     print("Starting Hydra broker")
 
     # For Gunicorn3:
-    app.run()
+    app.run(host='0.0.0.0')
 
     print("Shutting down Hydra broker")
     # os.unlink(pidfile)
